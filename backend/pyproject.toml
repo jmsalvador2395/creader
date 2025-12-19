@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "creader"
+version = "2020.0.0"
+dependencies = [
+    "fastapi[standard]",
+]
+requires-python = ">=3.8"
+authors = [
+    {name = "John Salvador", email = "jsalvador95@proton.me"},
+]
+maintainers = [
+    {name = "John Salvador", email = "jsalvador95@proton.me"}
+]
+description = "A self-hosted server for reading and managing your comic library"
+readme = "README.md"
+license = "MIT"
+#license-files = ["LICEN[CS]E.*"]
+#keywords = []
+classifiers = [
+    "Programming Language :: Python"
+]
+
+[project.optional-dependencies]
+dev = [
+    "black", 
+    "pytest",
+    "ipython",
+]
+#gui = ["PyQt5"]
+#cli = [ ]
+
+[project.urls]
+Repository = "https://github.com/jmsalvador2395/creader.git"
+
+[project.entry-points."spam.magical"]
+tomatoes = "creader:main"
