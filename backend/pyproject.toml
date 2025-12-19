@@ -6,6 +6,7 @@ build-backend = "hatchling.build"
 name = "creader"
 version = "2020.0.0"
 dependencies = [
+    "hatchling",
     "fastapi[standard]",
 ]
 requires-python = ">=3.8"
@@ -30,11 +31,6 @@ dev = [
     "pytest",
     "ipython",
 ]
-#gui = ["PyQt5"]
-#cli = [ ]
 
 [project.urls]
 Repository = "https://github.com/jmsalvador2395/creader.git"
-
-[project.entry-points."spam.magical"]
-tomatoes = "creader:main"
