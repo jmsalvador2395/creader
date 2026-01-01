@@ -1,0 +1,23 @@
+#!/bin/bash
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+PROJECT_DIR=$(dirname "$SCRIPT_DIR")
+
+BACK_END_DIR="$PROJECT_DIR/backend"
+FRONT_END_DIR="$PROJECT_DIR/frontend"
+
+if [ "$1" == "back" ]; then
+    cd $BACK_END_DIR
+    if [ ! -d "venv" ]; then
+        pip cache purge
+        virtualenv venv
+    fi
+
+    source venv/bin/activate
+    fastapi dev app/main.py
+
+elif [ "$1" == "front" ]; then
+    cd "$FRONT_END_DIR"
+    npm install
+    npm run dev
+fi

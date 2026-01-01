@@ -8,5 +8,6 @@ class Settings(BaseSettings):
         extra="ignore",
     )
     API_V1_STR: str = "/api/v1"
+    ENVIRONMENT: str = "hello"
 
 settings = Settings()
