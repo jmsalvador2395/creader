@@ -1,4 +1,5 @@
 from typing import Annotated
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -9,5 +10,7 @@ class Settings(BaseSettings):
     )
     API_V1_STR: str = "/api/v1"
     ENVIRONMENT: str = "hello"
+
+    BROWSER_ROOT: Path
 
 settings = Settings()
