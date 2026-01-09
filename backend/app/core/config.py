@@ -13,4 +13,7 @@ class Settings(BaseSettings):
 
     BROWSER_ROOT: Path
 
+    FRONTEND_PORT: int = 5173
+    BACKEND_PORT: int = 8000
+
 settings = Settings()
