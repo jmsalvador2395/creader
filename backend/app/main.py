@@ -1,13 +1,29 @@
-from typing import Union
 from fastapi import FastAPI, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Union
+
 
 from app.api.main import api_router
 from app.core.config import settings
 
 
-print(settings.ENVIRONMENT)
 app = FastAPI()
+
+origins = [
+    "http://localhost",
+    settings.FRONTEND_URL,
+]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.get("/")
 def read_root():
