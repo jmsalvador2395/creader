@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     )
     API_V1_STR: str = "/api/v1"
     ENVIRONMENT: str = "hello"
-    FRONTEND_URL: str = "localhost:5173"
+    FRONTEND_URL: str = 'localhost:5173'
 
     BROWSER_ROOT: Path
 

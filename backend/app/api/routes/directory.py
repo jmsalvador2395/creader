@@ -1,16 +1,14 @@
-from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
-from pydantic import BaseModel
 from fastapi.security import OAuth2PasswordBearer
-from pathlib import Path
-from app.core import config
-from typing import List
 from os import stat_result
+from pydantic import BaseModel
+from pathlib import Path
+from typing import Annotated, Optional, List
+
+from app.core import config
 
 settings = config.settings
 router = APIRouter(prefix="/directory", tags=["directory"])
-
-
     
 def get_file_info(target_file):
     stat: stat_result = target_file.stat()
@@ -31,10 +29,8 @@ def browse_root():
 # TODO finish file browsing
 @router.get('/browse/{path}')
 def browse(path: Path):
-    """returns the lsit of files and folders contained in `path`
+    """returns the list of files and folders contained in `path`
     
-    :param path: The directory path relative to settings.BROWSER_ROOT
-    :type path: Path | None
     """
 
     target_path = settings.BROWSER_ROOT / path
