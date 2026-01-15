@@ -27,11 +27,13 @@ def browse_root():
     return {'contents': files}
 
 # TODO finish file browsing
-@router.get('/browse/{path}')
-def browse(path: Path):
+@router.get('/browse/{path:path}')
+def browse(path: str):
     """returns the list of files and folders contained in `path`
     
     """
+
+    print(f'got {str(path)}')
 
     target_path = settings.BROWSER_ROOT / path
 

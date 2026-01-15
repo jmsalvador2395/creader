@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     ENVIRONMENT: str = "hello"
     FRONTEND_URL: str = 'localhost:5173'
+    VITE_API_URL: str = 'localhost:8000'
 
     BROWSER_ROOT: Path
 

@@ -19,7 +19,7 @@ export const routes: AppRoute[] = [
     showInNav: true,
   },
   {
-    path: "/explorer",
+    path: "/explorer/*",
     label: "Explorer",
     element: <Explorer />,
     showInNav: true,

@@ -1,3 +1,4 @@
+import { Link, useLocation } from "react-router-dom";
 import type { AppRoute } from '../routes/routes'
 
 type NavlinkProps = {
@@ -5,12 +6,15 @@ type NavlinkProps = {
   link: string;
 };
 function Navlink(props: NavlinkProps) {
-  console.log(`got ${props.link}`)
+
+  const base = props.link.replace(/^\/([^/]+).*$/, "/$1");
   return (
     <>
-      <a href={ props.link } className="text-gray-600 hover:text-gray-900 transition">
+      {/* <a href={ props.link } className="text-gray-600 hover:text-gray-900 transition"> */}
+      <Link to={ base }>
         { props.label}
-      </a>
+      </Link>
+      {/* </a> */}
     </>
   )
 }
@@ -20,11 +24,6 @@ type NavbarProps = {
   routes: AppRoute[]; 
 }; 
 export default function Navbar({ routes }: AppRoute[]) {
-    const navlinks = [
-      {"label": "Home", "link": "home"},
-      {"label": "Files", "link": "files"},
-      {"label": "Favorites", "link": "favorites"},
-    ];
 
     return (
       <>
