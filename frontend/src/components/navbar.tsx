@@ -42,7 +42,13 @@ export default function Navbar({ routes }: AppRoute[]) {
             <div className="hidden md:flex items-center space-x-8 w-full">
               { routes
                   .filter(({showInNav}) => showInNav)
-                  .map(({label, path}) => (<Navlink label={ label } link={ path } />)) }
+                  .map(({label, path}) => (
+                    <Navlink 
+                      key={ path }
+                      label={ label } 
+                      link={ path } 
+                    />)) 
+              }
               <a
                 href="#"
                 className="ml-auto rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
