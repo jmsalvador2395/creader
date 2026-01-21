@@ -20,4 +20,6 @@ elif [ "$1" == "front" ]; then
     cd "$FRONT_END_DIR"
     npm install
     npm run dev
+else
+    echo 'use with args ["back", "front"]'
 fi

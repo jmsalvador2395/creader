@@ -5,6 +5,7 @@ from typing import Union
 
 
 from app.api.main import api_router
+from app.media.media_routes import api_router as media_router
 from app.core.config import settings
 
 
@@ -26,3 +27,4 @@ app.add_middleware(
 
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(media_router)

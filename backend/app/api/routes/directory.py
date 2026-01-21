@@ -8,7 +8,7 @@ from typing import Annotated, Optional, List
 from app.core import config
 
 settings = config.settings
-router = APIRouter(prefix="/directory", tags=["directory"])
+router = APIRouter(prefix='/directory', tags=['directory'])
     
 def get_file_info(target_file):
     stat: stat_result = target_file.stat()
@@ -19,29 +19,28 @@ def get_file_info(target_file):
         'path': target_file.relative_to(settings.BROWSER_ROOT),
     }
 
+"""
 @router.get('/browse')
 def browse_root():
     files = [
         get_file_info(f) for f in settings.BROWSER_ROOT.iterdir()
     ]
     return {'contents': files}
+"""
 
 # TODO finish file browsing
-@router.get('/browse/{path:path}')
-def browse(path: str):
+@router.get('/browse')
+def browse(path: str=''):
     """returns the list of files and folders contained in `path`
-    
     """
-
-    print(f'got {str(path)}')
 
     target_path = settings.BROWSER_ROOT / path
 
     if not target_path.exists() or not target_path.is_dir():
-        raise HTTPException(status_code=404, detail="Invalid Path")
+        raise HTTPException(status_code=404, detail='Invalid Path')
     files = [get_file_info(f) for f in target_path.iterdir()]
 
-    return {'contents': files}
+    return {'contents': files, 'requested_path': path}
 
 # TODO implement file uploads
 # @router.post('/upload')
@@ -58,7 +57,7 @@ class FileList(BaseModel):
 @router.delete('/delete')
 def delete(files: FileList):
     print(files)
-    return {"status": "done"}
+    return {'status': 'done'}
 
 
 # TODO implement file movement
@@ -72,4 +71,4 @@ class FileMove(BaseModel):
 def move(files: FileMove):
     print(f'src: {source}\ndest: {destination}')
 
-    return {"status": "files moved"}
+    return {'status': 'files moved'}

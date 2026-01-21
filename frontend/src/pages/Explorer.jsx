@@ -15,7 +15,7 @@ export default function Explorer() {
     async function fetchFiles() {
       try {
         const api_url = import.meta.env.VITE_API_URL
-        const res = await fetch(`${api_url}/api/v1/directory/browse/${path}`);
+        const res = await fetch(`${api_url}/api/v1/directory/browse?path=${path}`);
         if (!res.ok) throw new Error("Request failed");
         const resp = await res.json();
         setData(resp.contents)
