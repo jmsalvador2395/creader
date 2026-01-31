@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import type { AppRoute } from '../routes/routes'
 
 type NavlinkProps = {
-  label: string;
+  title: string;
   link: string;
 };
 function Navlink(props: NavlinkProps) {
@@ -12,7 +12,7 @@ function Navlink(props: NavlinkProps) {
     <>
       {/* <a href={ props.link } className="text-gray-600 hover:text-gray-900 transition"> */}
       <Link to={ base }>
-        { props.label}
+        { props.title}
       </Link>
       {/* </a> */}
     </>
@@ -42,10 +42,10 @@ export default function Navbar({ routes }: AppRoute[]) {
             <div className="hidden md:flex items-center space-x-8 w-full">
               { routes
                   .filter(({showInNav}) => showInNav)
-                  .map(({label, path}) => (
+                  .map(({title, path}) => (
                     <Navlink 
                       key={ path }
-                      label={ label } 
+                      title={ title} 
                       link={ path } 
                     />)) 
               }

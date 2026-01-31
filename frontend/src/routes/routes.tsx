@@ -1,7 +1,7 @@
 import Home from "../pages/Home";
 import Explorer from "../pages/Explorer";
 import Favorites from "../pages/Favorites";
-import Reader from "../pages/Reader";
+import { Reader, ReaderRedirect } from "../pages/Reader";
 
 
 export type AppRoute = {
@@ -14,25 +14,36 @@ export type AppRoute = {
 export const routes: AppRoute[] = [
   {
     path: "/",
-    label: "Home",
+    title: "Home",
+    label: "home",
     element: <Home />,
     showInNav: true,
   },
   {
     path: "/explorer/*",
-    label: "Explorer",
+    title: "Explorer",
+    label: "explorer",
     element: <Explorer />,
     showInNav: true,
   },
   {
     path: "/favorites",
-    label: "Favorites",
+    title: "Favorites",
+    label: "favorites",
     element: <Favorites />,
     showInNav: true,
   },
   {
-    path: "/reader",
-    label: "Reader",
+    path: "/reader/:path",
+    title: "ReaderRedirect",
+    label: "readerRedirect",
+    element: <ReaderRedirect />,
+    showInNav: false,
+  },
+  {
+    path: "/reader/:container/:file",
+    title: "Reader",
+    label: "reader",
     element: <Reader />,
     showInNav: false, // not shown in navbar
   },
