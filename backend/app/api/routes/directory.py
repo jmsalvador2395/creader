@@ -4,38 +4,53 @@ from os import stat_result
 from pydantic import BaseModel
 from pathlib import Path
 from typing import Annotated, Optional, List
+from zipfile import ZipFile, BadZipFile
 
 from app.core import config
-from app.core.utils import (
+
+from app.files.validators import (
     is_supported_image, is_supported_video, is_zip,
-    is_supported_archive, has_images,
+    is_supported_archive,
 )
+from app.files.storage import get_file_info
+from app.files.metadata import has_images
 
 settings = config.settings
 router = APIRouter(prefix='/directory', tags=['directory'])
 
-def get_file_info(f):
-
-    stat: stat_result = f.stat()
-    return {
-        'name': f.name,
-        'st_size': stat.st_size,
-        'st_mtime': stat.st_mtime,
-        'path': f.relative_to(settings.BROWSER_ROOT),
-        'parent': f.parent.relative_to(settings.BROWSER_ROOT),
-        'is_file': f.is_file(),
-        'is_dir': f.is_dir(),
-        'is_supported_archive': is_supported_archive,
-    }
-
 @router.get('/info')
-def info(p: Path=Query(...)):
+def info(p: Path=Query('')):
     target = settings.BROWSER_ROOT / p
 
     if not target.exists():
         raise HTTPException(status_code=404, detail='Invalid Path')
 
     return get_file_info(target)
+
+@router.get('/list_entries')
+def list_entries(p: Path=Query(''), img: bool=Query(False)):
+    target = settings.BROWSER_ROOT / p
+    info = get_file_info(target)
+    
+    if target.suffix.lower() == '.zip':
+        try:
+            with ZipFile(target, 'r') as zf:
+                flist = zf.namelist()
+            return flist
+
+        except BadZipfile as e:
+            raise ArchiveOpenError(
+                f"failed to open archive: {e}"
+            )
+    elif target.is_dir():
+        flist = target.iterdir()
+
+    if img:
+        flist = list(filter(
+            lambda x: is_supported_image(Path(x)),
+            flist
+        ))
+    return flist
 
 @router.get('/resolve_target')
 def resolve_target(p: Path=Query(...)):
@@ -47,32 +62,55 @@ def resolve_target(p: Path=Query(...)):
     info = get_file_info(target)
 
     if info['is_supported_archive']:
+        if str(target).endswith('.zip'):
+            try:
+                flist = list_entries(target)
+                resp = {
+                    'container': target,
+                    'file': flist[0],
+                }
+                return resp
+            except Exception as e:
+                raise HTTPException(
+                    status_code=404, 
+                    detail='Failed to open zip file'
+                )
+        else:
+            raise HTTPException(status_code=404, detail='Invalid Archive')
         return {
             'container': info['parent'],
             'file': info['name'],
         }
-    if info['is_file']:
+    if info['is_supported_image']:
         return {
             'container': info['parent'],
             'file': info['name'],
+        }
+    if info['is_dir']:
+        flist = list(filter(
+            lambda x: is_supported_image(x),
+            target.iterdir()
+        ))
+        return {
+            'container': target,
+            'file': flist[0],
         }
 
-    # TODO finish this
-    return {
-        'container': '',
-        'file': '',
-    }
+    raise HTTPException(
+        status_code=404, 
+        detail='Invalid path to resolve'
+    )
 
 
 @router.get('/browse')
 def browse(path: str=''):
     """returns the list of files and folders contained in `path`
     """
-
     target = settings.BROWSER_ROOT / path
 
     if not target.exists() or not target.is_dir():
         raise HTTPException(status_code=404, detail='Invalid Path')
+
     files = [get_file_info(f) for f in target.iterdir()]
 
     return {'contents': files, 'requested_path': path}
@@ -83,7 +121,6 @@ def browse(path: str=''):
 @router.post('/upload')
 def upload():
     return {'message': 'uploaded file'}
-
 
 class FileList(BaseModel):
     files: List[str] | str

@@ -39,10 +39,6 @@ def is_importable(filename: Path):
         or is_supported_video(filename)
     )
 
-
-def to_megabytes(sz):
-    return f"{sz / 1024 / 1024:.2f} MB"
-
 def has_images(path: Path):
     """checks if the directory contains any supported image files
     """

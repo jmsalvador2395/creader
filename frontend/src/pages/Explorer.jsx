@@ -5,16 +5,16 @@ import './Explorer.css'
 
 
 function convertToReadableSize(size, is_file) {
-  if (size < 1_000)
+  if (size < 1_024)
     return `${size} B`;
 
   const divider = 1_024;
-  size /= (divider*8); // 8 to convert from bit to byte
-  if (size < 1_000)
+  size /= divider; // 8 to convert from bit to byte
+  if (size < 1_024)
     return `${size.toFixed(2)} KB`;
   
   size /= divider;
-  if (size < 1_000)
+  if (size < 1_024)
     return `${size.toFixed(2)} MB`;
 
   size /= divider;
@@ -33,7 +33,13 @@ export default function Explorer() {
     async function fetchFiles() {
       try {
         const api_url = import.meta.env.VITE_API_URL
-        const res = await fetch(`${api_url}/api/v1/directory/browse?path=${path}`);
+        let res;
+        if (path === "") {
+            res = await fetch(`${api_url}/api/v1/directory/browse`);
+        } else {
+            res = await fetch(`${api_url}/api/v1/directory/browse?path=${path}`);
+        }
+        console.log(res);
         if (!res.ok) throw new Error("Request failed");
         const resp = await res.json();
         setData(resp.contents);
@@ -93,13 +99,13 @@ export default function Explorer() {
         <tbody>
           { has_parent ? <tr key=".."><td><Link to={ `/explorer/${encodeURIComponent(parent) }` } > .. </Link></td></tr> : null}
           {
-            mdata.map(({name, path, st_mtime, display_size, explorer_link, encoded_path}) => (
+            mdata.map(({name, path, st_mtime, display_size, explorer_link, reader_link, encoded_path}) => (
               <tr key={ path }>
                 <td><Link to={ explorer_link }>{ name }</Link></td>
                 <td>{ new Date(st_mtime).toLocaleString() }</td>
                 <td>{ display_size }</td>
                 <td className="flex justify-center"> 
-                  <Link to={ `/reader/${encoded_path}` }>
+                  <Link to={ reader_link }>
                     <svg 
                       xmlns="http://www.w3.org/2000/svg" 
                       fill="none" 

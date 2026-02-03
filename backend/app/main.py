@@ -12,7 +12,6 @@ from app.core.config import settings
 app = FastAPI()
 
 origins = [
-    "http://localhost",
     settings.FRONTEND_URL,
 ]
 

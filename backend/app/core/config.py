@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Set
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -17,5 +17,19 @@ class Settings(BaseSettings):
 
     FRONTEND_PORT: int = 5173
     BACKEND_PORT: int = 8000
+
+    SUPPORTED_IMAGE_EXTENSIONS: Set[str] = {
+        '.jpg', '.jpeg', '.png', '.gif', 
+        '.bmp', '.webp', '.svg',
+    }
+
+    SUPPORTED_VIDEO_EXTENSIONS: Set[str] = {
+        '.mp4', '.mkv', '.avi', '.mov', 
+        '.webm', '.flv',
+    }
+
+    SUPPORTED_ARCHIVES: Set[str] = {
+        '.zip', '.cbz', '.cbr',
+    }
 
 settings = Settings()

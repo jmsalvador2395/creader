@@ -10,7 +10,25 @@ export function Reader() {
     `${decodeURIComponent(container)}/${decodeURIComponent(file)}`
   );
 
-  console.log(`${full_path}`);
+  const [data, setData] = useState({});
+
+  // make api call to get the file list of the directory
+  useEffect(() => {
+    async function fetchInfo() {
+      try {
+        const api_url = import.meta.env.VITE_API_URL
+        const res = await fetch(`${api_url}/api/v1/directory/list_entries?p=${container}&img=true`);
+        if (!res.ok) throw new Error("Request failed");
+        const resp = await res.json();
+        setData(resp);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    fetchInfo();
+  }, [path]);
+
+  console.log(data);
 
   return (
     <h1> Reader </h1>
@@ -42,6 +60,8 @@ export function ReaderRedirect() {
 
   const container = encodeURIComponent(data.container);
   const file = encodeURIComponent(data.file);
+
+  console.log(data);
 
   const navigate = useNavigate();
   
