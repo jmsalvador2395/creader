@@ -2,7 +2,7 @@ from pathlib import Path
 
 from app.core.config import settings
 
-from app.files.validators import (
+from app.files.metadata import (
     is_supported_image, is_supported_video, is_zip,
     is_supported_archive,
 )

@@ -7,11 +7,10 @@ from typing import Annotated, Optional, List
 from zipfile import ZipFile
 
 from app.core import config
-from app.files.validators import (
+from app.files.metadata import (
     is_supported_image, is_supported_video, is_zip,
-    is_supported_archive,
+    is_supported_archive, has_images
 )
-from app.files.metadata import has_images
 
 settings = config.settings
 router = APIRouter(prefix='/library', tags=['directory'])

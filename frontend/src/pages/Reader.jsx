@@ -10,13 +10,13 @@ export function Reader() {
     `${decodeURIComponent(container)}/${decodeURIComponent(file)}`
   );
 
-  const [data, setData] = useState({});
+  const [data, setData] = useState([]);
 
   // make api call to get the file list of the directory
   useEffect(() => {
     async function fetchInfo() {
       try {
-        const api_url = import.meta.env.VITE_API_URL
+        const api_url = import.meta.env.VITE_API_URL;
         const res = await fetch(`${api_url}/api/v1/directory/list_entries?p=${container}&img=true`);
         if (!res.ok) throw new Error("Request failed");
         const resp = await res.json();
@@ -28,10 +28,18 @@ export function Reader() {
     fetchInfo();
   }, [path]);
 
-  console.log(data);
+  //console.log(data);
+  //let page = data.indexof(file);
+  let page = data.indexOf(file);
+  
+  const api_url = import.meta.env.VITE_API_URL;
+  const img_url = `${api_url}/media/container-image?c=${encodeURIComponent(container)}&img=${encodeURIComponent(file)}`;
 
   return (
-    <h1> Reader </h1>
+    <>
+      <h1> Reader </h1>
+      <img src={ img_url }/>
+    </>
   )
 }
 

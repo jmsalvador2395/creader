@@ -8,12 +8,11 @@ from zipfile import ZipFile, BadZipFile
 
 from app.core import config
 
-from app.files.validators import (
+from app.files.metadata import (
     is_supported_image, is_supported_video, is_zip,
-    is_supported_archive,
+    is_supported_archive, has_images
 )
 from app.files.storage import get_file_info
-from app.files.metadata import has_images
 
 settings = config.settings
 router = APIRouter(prefix='/directory', tags=['directory'])
