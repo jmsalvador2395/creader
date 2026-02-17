@@ -32,8 +32,6 @@ export function Reader() {
 
   const [currentPage, setCurrentPage] = useState(0);
   useEffect(() => {
-    console.log(data);
-    console.log(`looking for page: ${file}`);
     setCurrentPage(data.findIndex((item) => item.name === file));
   }, [data]);
 
@@ -70,22 +68,27 @@ export function Reader() {
     for (let i=0; i < absOffset; i++) {
 
       // detect if going beyond page limit
-      if ( curPageTemp + step > pages.length || curPageTemp + step < 0) {
+      if ( curPageTemp + step >= pages.length || curPageTemp + step < 0) {
         break;
       }
       curPageTemp += step;
-      console.log(pages.length, data.length);
-      let pageInfo = pages[curPageTemp];
-      if (pageInfo.w/pageInfo.h > 1.0)
-        break;
+      try {
+        let pageInfo = pages[curPageTemp];
+        if (pageInfo.w/pageInfo.h > 1.0)
+          break;
+      } catch (error) {
+        console.log(`tried to access page ${curPageTemp} of ${pages.length}`);
+        console.log(error);
+      }
     }
-    setCurrentPage(curPageTemp);
+    if ( curPageTemp !== currentPage)
+      setCurrentPage(curPageTemp);
   };
 
 
   const handleKeyDown = (e) => {
     if (e.key === 'ArrowRight') {
-        shiftPage(-2);
+      shiftPage(-2);
     } else if (e.key === 'ArrowLeft') {
       shiftPage(2);
     }
@@ -98,8 +101,7 @@ export function Reader() {
   const getPageClass = (index) => {
     const navHeight = '4rem';
     const baseStyle = {
-      position: 'fixed',
-      top: navHeight,
+      position: 'absolute',
       height: '100vh',
       width: 'auto',
       objectFit: 'contain',
@@ -110,9 +112,10 @@ export function Reader() {
 
     const pageInfo = pages[currentPage];
     if (!pageInfo) return { visibility: 'hidden' } 
-    const ratio = pageInfo.w/pageInfo.h;
+    const indexRatio = pageInfo.w/pageInfo.h;
     if (index === currentPage) {
-      if (ratio > 1.0 || index == pages.length - 1) {
+      const hasNextPage = !(index == pages.length - 1);
+      if (indexRatio > 1.0 || !hasNextPage) {
         // center page
         return { 
           ...baseStyle, 
@@ -121,13 +124,26 @@ export function Reader() {
           width: '100vw'
         };
       } else {
+        // center page
+        if (hasNextPage) {
+          const nextPageInfo = pages[currentPage+1];
+          const nextPageRatio = nextPageInfo.w/nextPageInfo.h;
+          if (nextPageRatio > 1.0) {
+            return { 
+              ...baseStyle, 
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '100vw'
+            };
+          }
+        } 
         // right page
         return { 
           ...baseStyle, 
           left: '50%',
         };
       }
-    } else if (index === currentPage + 1 && ratio <= 1.0){
+    } else if (index === currentPage + 1 && indexRatio <= 1.0){
       const currentPageInfo = pages[currentPage];
       if (currentPageInfo.w / currentPageInfo.h > 1.0) {
         return { ...baseStyle, visibility: 'hidden' };
@@ -150,10 +166,8 @@ export function Reader() {
       visited.add(index);
       return item.link;
     } else {
-      // console.log(`not loading page ${index}`);
       return undefined;
     }
-
   };
 
   if (loading) return (
@@ -176,8 +190,8 @@ export function Reader() {
         tabIndex={ 0 }
         onKeyDown={ handleKeyDown }
       >
-      <div className="left-pane fixed left-0 bottom-0 w-1/2 z-10 cursor-pointer" style={{ top: '4rem' }} onClick={() => shiftPage(1)}></div>
-      <div className="pages fixed left-0 right-0 bottom-0 z-20" style={{ top: '4rem', pointerEvents: 'none' }}>
+      <div className="left-pane fixed left-0 top-0 bottom-0 w-1/2 z-10 cursor-pointer" onClick={() => shiftPage(1)}></div>
+      <div className="pages fixed left-0 right-0 top-0 bottom-0 z-20" style={{ pointerEvents: 'none', overflow: 'auto'}}>
       { pages.map((item, index) => (
         <img
           src={ setImageSource(item, index) }
@@ -191,7 +205,7 @@ export function Reader() {
         />
       ))}
       </div>
-      <div className="right-pane fixed right-0 bottom-0 w-1/2 z-10 cursor-pointer" style={{ top: '4rem' }} onClick={() => shiftPage(-1)}></div>
+      <div className="right-pane fixed right-0 top-0 bottom-0 w-1/2 z-10 cursor-pointer" onClick={() => shiftPage(-1)}></div>
       </div>
     </>
   )

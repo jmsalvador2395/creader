@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import type { AppRoute } from '../routes/routes'
 
@@ -19,15 +20,25 @@ function Navlink(props: NavlinkProps) {
   )
 }
 
-
-type NavbarProps = { 
-  routes: AppRoute[]; 
-}; 
 export default function Navbar({ routes }: AppRoute[]) {
+
+    const [visible, setVisible] = useState(true);
+
+    useEffect(() => {
+      const onWheel = (e: WheelEvent) => {
+        if (e.deltaY > 0) setVisible(false);
+        else if (e.deltaY < 0) setVisible(true);
+      };
+      window.addEventListener('wheel', onWheel);
+      return () => window.removeEventListener('wheel', onWheel);
+    }, []);
 
     return (
       <>
-       <nav className="w-full"> 
+       <nav
+        className="w-full fixed top-0 z-50 transition-transform duration-300 bg-white dark:bg-gray-900"
+        style={{ transform: visible ? 'translateY(0)' : 'translateY(-100%)' }}
+       >
         <div className="mx-auto px-8">
           <div className="flex h-16 items-center justify-start">
 

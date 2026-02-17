@@ -32,6 +32,7 @@ async def info(p: Path=Query('')):
 async def list_entries(
     p: Path=Query(''), 
     img: bool=Query(False),
+    by: str=Query('name'),
 ):
     print(f'img is {img}')
     target = settings.BROWSER_ROOT / p

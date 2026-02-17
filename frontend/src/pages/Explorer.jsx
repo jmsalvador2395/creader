@@ -86,7 +86,7 @@ export default function Explorer() {
   })
 
   return (
-    <div className="mx-auto w-[90%] max-w-screen-2xl overflow-x-auto">
+    <div className="mx-auto w-[90%] max-w-screen-2xl overflow-x-auto pt-20">
       <table className="w-full border border-gray-300 border-collaps">
         <thead>
           <tr>
