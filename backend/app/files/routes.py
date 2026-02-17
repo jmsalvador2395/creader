@@ -79,16 +79,16 @@ async def list_entries(
             lambda x: is_supported_image(Path(x)),
             flist
         ))
-        flist = [
+        flist = sorted([
             {
-                'name': f,
+                'name': f.name,
                 **dict(zip(
                     ['w', 'h'], 
                     Image.open(f).size
                 ))
             }
             for f in flist
-        ]
+        ], key=lambda x: x['name'])
     return flist
 
 @api_router.get('/resolve-target')
@@ -150,7 +150,10 @@ async def browse(path: str=''):
     if not target.exists() or not target.is_dir():
         raise HTTPException(status_code=404, detail='Invalid Path')
 
-    files = [get_file_info(f) for f in target.iterdir()]
+    files = sorted(
+        [get_file_info(f) for f in target.iterdir()],
+        key=lambda x: (~x['is_dir'], -x['st_mtime']),
+    )
 
     return {'contents': files, 'requested_path': path}
 

@@ -10,6 +10,7 @@ export function Reader() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const divRef = useRef(null);
+  const [visited, setVisited] = useState(new Set());
 
   // make api call to get the file list of the directory
   useEffect(() => {
@@ -31,6 +32,8 @@ export function Reader() {
 
   const [currentPage, setCurrentPage] = useState(0);
   useEffect(() => {
+    console.log(data);
+    console.log(`looking for page: ${file}`);
     setCurrentPage(data.findIndex((item) => item.name === file));
   }, [data]);
 
@@ -71,12 +74,11 @@ export function Reader() {
         break;
       }
       curPageTemp += step;
+      console.log(pages.length, data.length);
       let pageInfo = pages[curPageTemp];
-      console.log(pageInfo);
       if (pageInfo.w/pageInfo.h > 1.0)
         break;
     }
-    console.log(`changed page from ${currentPage} to ${curPageTemp}`);
     setCurrentPage(curPageTemp);
   };
 
@@ -108,7 +110,6 @@ export function Reader() {
 
     const pageInfo = pages[currentPage];
     if (!pageInfo) return { visibility: 'hidden' } 
-    console.log(pageInfo);
     const ratio = pageInfo.w/pageInfo.h;
     if (index === currentPage) {
       if (ratio > 1.0 || index == pages.length - 1) {
@@ -141,6 +142,20 @@ export function Reader() {
     }
   };
 
+  const setImageSource = (item, index) => {
+    const nearby = Math.abs(currentPage - index) < 10;
+    if (visited.has(index)) {
+      return item.link;
+    } else if (nearby) {
+      visited.add(index);
+      return item.link;
+    } else {
+      // console.log(`not loading page ${index}`);
+      return undefined;
+    }
+
+  };
+
   if (loading) return (
     <>
     Loading ...
@@ -152,13 +167,6 @@ export function Reader() {
     No Pages
     </>
   );
-
-  const getPriority = (index) => {
-    if (Math.abs(currentPage - index) <= 2)
-      return "high";
-    else
-      return "auto";
-  };
 
   return (
     <>
@@ -172,10 +180,9 @@ export function Reader() {
       <div className="pages fixed left-0 right-0 bottom-0 z-20" style={{ top: '4rem', pointerEvents: 'none' }}>
       { pages.map((item, index) => (
         <img
-          src={ item.link }
+          src={ setImageSource(item, index) }
           key={ item.name }
           style={ getPageClass(index) }
-          fetchpriority= { getPriority(index) }
           onClick={(e) => {
             const midpoint = window.innerWidth / 2;
             if (e.clientX < midpoint) shiftPage(2);

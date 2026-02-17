@@ -102,7 +102,7 @@ export default function Explorer() {
             mdata.map(({name, path, st_mtime, display_size, explorer_link, reader_link, encoded_path}) => (
               <tr key={ path }>
                 <td><Link to={ explorer_link }>{ name }</Link></td>
-                <td>{ new Date(st_mtime).toLocaleString() }</td>
+                <td>{ new Date(st_mtime*1000).toLocaleString() }</td>
                 <td>{ display_size }</td>
                 <td className="flex justify-center"> 
                   <Link to={ reader_link }>
