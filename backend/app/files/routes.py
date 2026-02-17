@@ -5,6 +5,8 @@ from pydantic import BaseModel
 from pathlib import Path
 from typing import Annotated, Optional, List
 from zipfile import ZipFile, BadZipFile
+from PIL import Image
+from io import BytesIO
 
 from app.core import config
 
@@ -15,10 +17,10 @@ from app.files.metadata import (
 from app.files.storage import get_file_info
 
 settings = config.settings
-router = APIRouter(prefix='/directory', tags=['directory'])
+api_router = APIRouter(prefix='/directory', tags=['directory'])
 
-@router.get('/info')
-def info(p: Path=Query('')):
+@api_router.get('/info')
+async def info(p: Path=Query('')):
     target = settings.BROWSER_ROOT / p
 
     if not target.exists():
@@ -26,33 +28,71 @@ def info(p: Path=Query('')):
 
     return get_file_info(target)
 
-@router.get('/list_entries')
-def list_entries(p: Path=Query(''), img: bool=Query(False)):
+@api_router.get('/list-entries')
+async def list_entries(
+    p: Path=Query(''), 
+    img: bool=Query(False),
+):
+    print(f'img is {img}')
     target = settings.BROWSER_ROOT / p
+    if not target.exists():
+        raise HTTPException(
+            status_code=404, 
+            detail='Invalid Path: {str(p)}'
+        )
     info = get_file_info(target)
     
     if target.suffix.lower() == '.zip':
         try:
             with ZipFile(target, 'r') as zf:
                 flist = zf.namelist()
+                if img:
+                    flist = list(filter(
+                        lambda x: is_supported_image(Path(x)),
+                        flist
+                    ))
+                    flist = [
+                        {
+                            'name': f,
+                            **dict(zip(
+                                ['w', 'h'], 
+                                Image.open(BytesIO(zf.read(f))).size
+                            ))
+                        }
+                        for f in flist
+                    ]
             return flist
 
-        except BadZipfile as e:
-            raise ArchiveOpenError(
-                f"failed to open archive: {e}"
+        except BadZipFile as e:
+            raise HTTPException(
+                status_code=500, 
+                detail=f"failed to open archive: {e}"
             )
-    elif target.is_dir():
-        flist = target.iterdir()
-
+    elif not target.is_dir():
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Unsupported container {str(target)}"
+        )
+    flist = target.iterdir()
     if img:
         flist = list(filter(
             lambda x: is_supported_image(Path(x)),
             flist
         ))
+        flist = [
+            {
+                'name': f,
+                **dict(zip(
+                    ['w', 'h'], 
+                    Image.open(f).size
+                ))
+            }
+            for f in flist
+        ]
     return flist
 
-@router.get('/resolve_target')
-def resolve_target(p: Path=Query(...)):
+@api_router.get('/resolve-target')
+async def resolve_target(p: Path=Query(...)):
     target = settings.BROWSER_ROOT / p
 
     if not target.exists():
@@ -63,10 +103,10 @@ def resolve_target(p: Path=Query(...)):
     if info['is_supported_archive']:
         if str(target).endswith('.zip'):
             try:
-                flist = list_entries(target)
+                flist = await list_entries(target, img=True)
                 resp = {
-                    'container': target,
-                    'file': flist[0],
+                    'container': target.relative_to(settings.BROWSER_ROOT),
+                    'file': flist[0]['name'],
                 }
                 return resp
             except Exception as e:
@@ -91,7 +131,7 @@ def resolve_target(p: Path=Query(...)):
             target.iterdir()
         ))
         return {
-            'container': target,
+            'container': target.relative_to(settings.BROWSER_ROOT),
             'file': flist[0],
         }
 
@@ -101,8 +141,8 @@ def resolve_target(p: Path=Query(...)):
     )
 
 
-@router.get('/browse')
-def browse(path: str=''):
+@api_router.get('/browse')
+async def browse(path: str=''):
     """returns the list of files and folders contained in `path`
     """
     target = settings.BROWSER_ROOT / path
@@ -117,7 +157,7 @@ def browse(path: str=''):
 # TODO implement file uploads
 # @router.post('/upload')
 # def upload(file: UploadFile):
-@router.post('/upload')
+@api_router.post('/upload')
 def upload():
     return {'message': 'uploaded file'}
 
@@ -125,7 +165,7 @@ class FileList(BaseModel):
     files: List[str] | str
 
 # TODO implement file deletion
-@router.delete('/delete')
+@api_router.delete('/delete')
 def delete(files: FileList):
     print(files)
     return {'status': 'done'}
@@ -138,8 +178,8 @@ class FileMove(BaseModel):
 
 
 # TODO implment file movement
-@router.post('/move')
-def move(files: FileMove):
+@api_router.post('/move')
+async def move(files: FileMove):
     print(f'src: {source}\ndest: {destination}')
 
     return {'status': 'files moved'}

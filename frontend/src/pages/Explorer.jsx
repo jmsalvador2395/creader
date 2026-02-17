@@ -39,7 +39,7 @@ export default function Explorer() {
         } else {
             res = await fetch(`${api_url}/api/v1/directory/browse?path=${path}`);
         }
-        console.log(res);
+        console.log(res.json);
         if (!res.ok) throw new Error("Request failed");
         const resp = await res.json();
         setData(resp.contents);
