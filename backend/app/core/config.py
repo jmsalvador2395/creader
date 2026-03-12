@@ -1,4 +1,4 @@
-from typing import Annotated, Set
+from typing import Annotated, Set, Optional
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -17,6 +17,14 @@ class Settings(BaseSettings):
 
     FRONTEND_PORT: int = 5173
     BACKEND_PORT: int = 8000
+
+    DB_SOURCE: str
+    
+    DB_HOST: Optional[str]
+    DB_PASSWD: Optional[str]
+    DB_USER: Optional[str]
+    DB_PORT: str = '5432'
+    
 
     SUPPORTED_IMAGE_EXTENSIONS: Set[str] = {
         '.jpg', '.jpeg', '.png', '.gif', 

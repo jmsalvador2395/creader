@@ -1,6 +1,10 @@
-from pathlib import Path
 from typing import Union
+from pathlib import Path
+
 from app.core.config import settings
+
+class ArchiveOpenError(Exception):
+    pass
 
 def _convert_to_path(p: Union[Path, str]):
     assert (isinstance(p, Path) or isinstance(p, str)), (

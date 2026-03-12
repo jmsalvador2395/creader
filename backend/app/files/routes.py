@@ -5,17 +5,13 @@ from pydantic import BaseModel
 from pathlib import Path
 from typing import Annotated, Optional, List
 from zipfile import ZipFile, BadZipFile
-from PIL import Image
 from io import BytesIO
 
 from app.core import config
 
-from app.files.metadata import (
-    is_supported_image, is_supported_video, is_zip,
-    is_supported_archive, has_images
+from .services import (
+    is_supported_image, get_file_info, get_file_list
 )
-from app.files.storage import get_file_info
-
 settings = config.settings
 api_router = APIRouter(prefix='/directory', tags=['directory'])
 
@@ -34,63 +30,25 @@ async def list_entries(
     img: bool=Query(False),
     by: str=Query('name'),
 ):
-    print(f'img is {img}')
     target = settings.BROWSER_ROOT / p
     if not target.exists():
         raise HTTPException(
             status_code=404, 
             detail='Invalid Path: {str(p)}'
         )
-    info = get_file_info(target)
-    
-    if target.suffix.lower() == '.zip':
-        try:
-            with ZipFile(target, 'r') as zf:
-                flist = zf.namelist()
-                if img:
-                    flist = list(filter(
-                        lambda x: is_supported_image(Path(x)),
-                        flist
-                    ))
-                    flist = [
-                        {
-                            'name': f,
-                            **dict(zip(
-                                ['w', 'h'], 
-                                Image.open(BytesIO(zf.read(f))).size
-                            ))
-                        }
-                        for f in flist
-                    ]
-            return flist
-
-        except BadZipFile as e:
-            raise HTTPException(
-                status_code=500, 
-                detail=f"failed to open archive: {e}"
-            )
-    elif not target.is_dir():
+    try:
+        return get_file_list(img, target)
+    except BadZipFile as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"failed to open archive: {e}"
+        )
+    except ValueError as e:
         raise HTTPException(
             status_code=404, 
             detail=f"Unsupported container {str(target)}"
         )
-    flist = target.iterdir()
-    if img:
-        flist = list(filter(
-            lambda x: is_supported_image(Path(x)),
-            flist
-        ))
-        flist = sorted([
-            {
-                'name': f.name,
-                **dict(zip(
-                    ['w', 'h'], 
-                    Image.open(f).size
-                ))
-            }
-            for f in flist
-        ], key=lambda x: x['name'])
-    return flist
+
 
 @api_router.get('/resolve-target')
 async def resolve_target(p: Path=Query(...)):
