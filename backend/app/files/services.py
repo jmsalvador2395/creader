@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import Union
 from PIL import Image
@@ -48,6 +49,12 @@ def get_file_list(img, target):
         raise ValueError(f"Unsupported target: {target}")
     flist = target.iterdir()
     if img:
+
+        def natural_sort_key(s):
+            return [int(c) if c.isdigit() else c.lower() for c in re.split(r'(\d+)', s)]
+
+        # files.sort(key=natural_sort_key)
+
         flist = list(filter(
             lambda x: is_supported_image(Path(x)),
             flist
@@ -61,5 +68,6 @@ def get_file_list(img, target):
                 ))
             }
             for f in flist
-        ], key=lambda x: x['name'])
+        # ], key=lambda x: x['name'])
+        ], key=natural_sort_key)
     return flist
