@@ -401,6 +401,7 @@ export function ReaderRedirect() {
 
   const loc = useLocation().pathname
   const path = loc.replace(/^\/reader\/?/, "");
+  const apiUrl = import.meta.env.VITE_API_URL;
 
   const [data, setData] = useState({});
 
