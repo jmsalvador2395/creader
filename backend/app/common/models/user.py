@@ -1,9 +1,15 @@
-from fastapi_users.db import SQLModelBaseUserTable
-from sqlmodel import Field, SQLModel
-from typing import Optional
-import uuid
+from fastapi import Depends
+from fastapi_users.db import SQLAlchemyUserDatabase, SQLAlchemyBaseUserTableUUID
+from sqlalchemy import String
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Mapped, mapped_column
 
-class User(SQLModelBaseUserTable[uuid.UUID], table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    # add any custom fields here
-    full_name: Optional[str] = None
+from app.core.db.base import AuthBase
+from app.core.db.session import get_async_session
+
+
+class User(SQLAlchemyBaseUserTableUUID, AuthBase):
+    username: Mapped[str] = mapped_column(String(50), unique=True)
+
+async def get_user_db(session: AsyncSession = Depends(get_async_session)):
+    yield SQLAlchemyUserDatabase(session, User)

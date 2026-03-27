@@ -1,3 +1,4 @@
+import math
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, Query
 from fastapi.security import OAuth2PasswordBearer
 from os import stat_result
@@ -6,11 +7,13 @@ from pathlib import Path
 from typing import Annotated, Optional, List
 from zipfile import ZipFile, BadZipFile
 from io import BytesIO
+from fastapi_pagination import Page, paginate
 
 from app.core import config
+from app.core.globals import logger
 
 from .services import (
-    is_supported_image, get_file_info, get_file_list
+    is_supported_image, get_file_info, get_file_list, natural_sort_key
 )
 settings = config.settings
 api_router = APIRouter(prefix='/directory', tags=['directory'])
@@ -30,6 +33,7 @@ async def list_entries(
     img: bool=Query(False),
     by: str=Query('name'),
 ):
+    logger.log(20, f"listing entries for `{str(p)}`")
     target = settings.BROWSER_ROOT / p
     if not target.exists():
         raise HTTPException(
@@ -37,7 +41,8 @@ async def list_entries(
             detail='Invalid Path: {str(p)}'
         )
     try:
-        return get_file_list(img, target)
+        items = get_file_list(target, img)
+        return items
     except BadZipFile as e:
         raise HTTPException(
             status_code=500, 
@@ -60,9 +65,10 @@ async def resolve_target(p: Path=Query(...)):
     info = get_file_info(target)
 
     if info['is_supported_archive']:
-        if str(target).endswith('.zip'):
+        if target.suffix in settings.ZIP_FILES:
             try:
-                flist = await list_entries(target, img=True)
+                # flist = await list_entries(target, img=True)
+                flist = get_file_list(target, True)
                 resp = {
                     'container': target.relative_to(settings.BROWSER_ROOT),
                     'file': flist[0]['name'],
@@ -74,24 +80,19 @@ async def resolve_target(p: Path=Query(...)):
                     detail='Failed to open zip file'
                 )
         else:
-            raise HTTPException(status_code=404, detail='Invalid Archive')
-        return {
-            'container': info['parent'],
-            'file': info['name'],
-        }
+            raise HTTPException(status_code=500, detail='Failed to read archive')
     if info['is_supported_image']:
         return {
             'container': info['parent'],
             'file': info['name'],
         }
     if info['is_dir']:
-        flist = list(filter(
-            lambda x: is_supported_image(x),
-            target.iterdir()
-        ))
+        flist = await list_entries(target, img=True)
+        if len(flist) == 0:
+            raise HTTPException(status_code=404, detail="no images in target")
         return {
             'container': target.relative_to(settings.BROWSER_ROOT),
-            'file': flist[0],
+            'file': flist[0]['name'],
         }
 
     raise HTTPException(
@@ -101,7 +102,12 @@ async def resolve_target(p: Path=Query(...)):
 
 
 @api_router.get('/browse')
-async def browse(path: str=''):
+async def browse(
+    path: str=Query(''),
+    page: int=Query(1),
+    size: int=Query(50),
+    search: str=Query(''),
+):
     """returns the list of files and folders contained in `path`
     """
     target = settings.BROWSER_ROOT / path
@@ -114,7 +120,23 @@ async def browse(path: str=''):
         key=lambda x: (~x['is_dir'], -x['st_mtime']),
     )
 
-    return {'contents': files, 'requested_path': path}
+    if search != '':
+        files = list(filter(
+            lambda item: search in item['name'].lower(),
+            files
+        ))
+
+    start = max((page - 1) * size, 0)
+    page = page if start != 0 else 0
+
+    # return {'contents': files, 'requested_path': path}
+    return {
+        'contents': files[start:start + size], 
+        'requested_path': path,
+        'page': page,
+        'page_size': size,
+        'num_pages': math.ceil(len(files) / size),
+    }
 
 # TODO implement file uploads
 # @router.post('/upload')

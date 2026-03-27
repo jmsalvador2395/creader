@@ -1,7 +1,9 @@
+import os
 from typing import Union
 from pathlib import Path
 
 from app.core.config import settings
+from app.core.globals import logger
 
 class ArchiveOpenError(Exception):
     pass
@@ -80,14 +82,19 @@ def is_supported_video(p: Union[Path, str]):
 
 def is_zip(p: Union[Path, str]):
     p = _convert_to_path(p)
-    return p.suffix.lower() in settings.SUPPORTED_ARCHIVES
+    return p.suffix.lower() == '.zip'
 
 
 def is_supported_archive(p: Union[Path, str]):
     """checks if the file is in SUPPORTED_ARCHIVES
     """
     p = _convert_to_path(p)
-    return is_zip(p) #or p.suffix.lower() == '.rar'
+    if isinstance(p, Path):
+        return p.suffix.lower() in settings.SUPPORTED_ARCHIVES
+    elif (type(p) == str):
+        return os.path.splitext(p)[-1].lower() in settings.SUPPORTED_ARCHIVES
+    else:
+        return False
 
 def is_importable(p: Union[Path, str]):
     """checks if the path provided can be imported as a Media object

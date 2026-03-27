@@ -9,6 +9,12 @@ from app.common.files import is_supported_archive, is_supported_image
 
 from zipfile import ZipFile, BadZipFile
 
+def natural_sort_key(p):
+    return [
+        int(c) if c.isdigit() else c.lower() 
+        for c in re.split(r'(\d+)', str(p))
+    ]
+
 def get_file_info(p: Path):
 
     stat = p.stat()
@@ -24,8 +30,9 @@ def get_file_info(p: Path):
         'is_supported_image': is_supported_image(p),
     }
 
-def get_file_list(img, target):
-    if target.suffix.lower() == '.zip':
+def get_file_list(target, img=None):
+
+    if target.suffix.lower() in settings.ZIP_FILES:
         with ZipFile(target, 'r') as zf:
             flist = zf.namelist()
             if img:
@@ -43,17 +50,12 @@ def get_file_list(img, target):
                     }
                     for f in flist
                 ]
-        return flist
+        return sorted(flist, key=natural_sort_key)
 
     elif not target.is_dir():
         raise ValueError(f"Unsupported target: {target}")
     flist = target.iterdir()
     if img:
-
-        def natural_sort_key(s):
-            return [int(c) if c.isdigit() else c.lower() for c in re.split(r'(\d+)', s)]
-
-        # files.sort(key=natural_sort_key)
 
         flist = list(filter(
             lambda x: is_supported_image(Path(x)),

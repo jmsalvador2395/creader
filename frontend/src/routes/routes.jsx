@@ -2,16 +2,10 @@ import Home from "../pages/Home";
 import Explorer from "../pages/Explorer";
 import Favorites from "../pages/Favorites";
 import { Reader, ReaderRedirect } from "../pages/Reader";
+import Login from "../pages/Login";
+import Register from "../pages/Register";
 
-
-export type AppRoute = {
-  path: string;
-  label: string;
-  element: JSX.Element;
-  showInNav?: boolean;
-};
-
-export const routes: AppRoute[] = [
+export const routes = [
   {
     path: "/",
     title: "Home",
@@ -45,6 +39,20 @@ export const routes: AppRoute[] = [
     title: "Reader",
     label: "reader",
     element: <Reader />,
+    showInNav: false, // not shown in navbar
+  },
+  {
+    path: "/login",
+    title: "Login",
+    label: "login",
+    element: <Login/>,
+    showInNav: false, // not shown in navbar
+  },
+  {
+    path: "/register",
+    title: "Register",
+    label: "register",
+    element: <Register/>,
     showInNav: false, // not shown in navbar
   },
 ];

@@ -22,8 +22,12 @@ class Settings(BaseSettings):
     
     DB_HOST: Optional[str]
     DB_PASSWD: Optional[str]
-    DB_USER: Optional[str]
+    DB_USER: str = "creader"
     DB_PORT: str = '5432'
+    DB_NAME: str = "creader"
+
+    SECRET: str
+    COOKIE_MAX_AGE: int
     
 
     SUPPORTED_IMAGE_EXTENSIONS: Set[str] = {
@@ -39,5 +43,7 @@ class Settings(BaseSettings):
     SUPPORTED_ARCHIVES: Set[str] = {
         '.zip', '.cbz', '.cbr',
     }
+
+    ZIP_FILES: Set[str] = SUPPORTED_ARCHIVES | set({})
 
 settings = Settings()

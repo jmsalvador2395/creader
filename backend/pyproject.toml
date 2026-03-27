@@ -11,12 +11,15 @@ version = "2020.0.0"
 dependencies = [
     "hatchling",
     "fastapi[standard]",
+    "fastapi-pagination",
     "dotenv",
     "pydantic",
     "Pillow",
     "fastapi-users[sqlalchemy]",
     "sqlalchemy",
     "asyncpg",
+    "aiosqlite",
+    "sqlmodel",
 ]
 requires-python = ">=3.8"
 authors = [
