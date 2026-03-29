@@ -1,5 +1,11 @@
 import { useRef, useEffect, useState } from "react";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
+import { 
+  readFavorites,
+  readBookmark,
+  createBookmark,
+  deleteBookmark
+} from "../api/library"
 
 export function Reader() {
 
@@ -19,30 +25,81 @@ export function Reader() {
   const [currentPage, setCurrentPage] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [favorited, setFavorited] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarks, setBookmarks] = useState(new Set());
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [toastVisible, setToastVisible] = useState(false);
+
+  useEffect(() => {
+    let timeout;
+    const handleMouseMove = () => {
+      document.body.style.cursor = "default";
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        document.body.style.cursor = "none";
+      }, 2000);
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      clearTimeout(timeout);
+      document.body.style.cursor = "default";
+    };
+  }, []);
 
   const containerEnc = encodeURIComponent(container);
-  const containerEncEnc = encodeURIComponent(containerEnc);
-  console.log(`container: ${container}, containerEnc: ${containerEnc}`);
 
+  // check favorite status
   useEffect(() => { 
     console.log(`querying favorite status`);
     queryFavorite(); 
   }, [container]);
-
-  // set favorited state
   async function queryFavorite() {
-    try {
-      const res = await fetch(
-        `${apiUrl}/api/v1/library/favorite?path=${containerEnc}`,
-        { credentials: "include" },
-      );
-      if (!res.ok) throw new Error("Request failed");
-      const resp = await res.json();
-      setFavorited(resp.exists);
-    } catch (err) {
-      console.log(`failed to determine favorite status`);
-      setFavorited(false);
+    setFavorited(await readFavorites(container));
+  }
+
+  // check bookmarks
+  useEffect(() => { 
+    queryBookmarks();
+  }, [container]);
+
+  async function queryBookmarks() {
+    const res = await readBookmark(container, null);
+    const next = new Set(res.map(item => item.page));
+    setBookmarks(next);
+    const pageName = data[currentPage]?.name;
+    if (pageName) setIsBookmarked(next.has(pageName));
+  }
+
+  useEffect(() => {
+    const pageName = data[currentPage]?.name;
+    setIsBookmarked(bookmarks.has(pageName));
+  }, [bookmarks, currentPage]);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setToastVisible(true);
+    setTimeout(() => setToastVisible(false), 2000);
+    setTimeout(() => setToast(null), 2300);
+  };
+
+  const toggleBookmarked = async (page) => {
+    const pageName = data[page].name;
+    if (bookmarks.has(pageName)) {
+      const res = await deleteBookmark(container, pageName);
+      if (res) {
+        const next = new Set(bookmarks);
+        next.delete(pageName);
+        setBookmarks(next);
+        if (!menuOpen) showToast("Bookmark removed");
+      }
+    } else {
+      const res = await createBookmark(container, pageName);
+      if (res) {
+        const next = new Set([...bookmarks, pageName]);
+        setBookmarks(next);
+        if (!menuOpen) showToast("Bookmark added");
+      }
     }
   }
 
@@ -146,6 +203,8 @@ export function Reader() {
       computeVisiblePages(curPageTemp, prematureExit);
       divRef.current?.scrollIntoView({ behavior: 'instant' });
     }
+    const pageName = data[curPageTemp].name;
+    setIsBookmarked(bookmarks.has(pageName));
   };
   const computeVisiblePages = (pageNum, prematureExit) => {
 
@@ -222,13 +281,15 @@ export function Reader() {
       } else if (e.key === 'f' || e.key === 'Enter') {
         e.preventDefault();
         toggleFullscreen();
+      } else if (e.key === 'm') {
+        setMenuOpen(!menuOpen);
+      } else if (e.key === 'p') {
+        toggleBookmarked(currentPage);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-}, [currentPage, visiblePages, pages]);
-
-
+  }, [currentPage, visiblePages, pages]);
 
   const setImageSource = (item, index) => {
     const nearby = Math.abs(currentPage - index) < PRELOAD_DIST;
@@ -276,6 +337,13 @@ export function Reader() {
 
   return (
     <>
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-800 text-white text-sm px-4 py-2 rounded shadow-lg pointer-events-none transition-opacity duration-300 ${toastVisible ? "opacity-100" : "opacity-0"}`}>
+          {toast}
+        </div>
+      )}
+
       {/* Menu backdrop */}
       {menuOpen && (
         <div
@@ -315,10 +383,10 @@ export function Reader() {
           </button>
           <button
             className="flex items-center gap-2 text-white hover:text-blue-400 transition-colors w-half"
-            onClick={() => setBookmarked(!bookmarked)}
+            onClick={() => toggleBookmarked(currentPage)}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"
-              fill={bookmarked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"
+              fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"
             >
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
             </svg>
@@ -331,6 +399,7 @@ export function Reader() {
         className="relative flex justify-center items-center outline-none"
         ref={ divRef }
         tabIndex={ 0 }
+
       >
       {/* Menu toggle button */}
       <button

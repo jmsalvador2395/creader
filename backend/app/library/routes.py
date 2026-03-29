@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, Query
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 from pathlib import Path
-from sqlalchemy import delete, and_, select
+from sqlalchemy import delete, and_, select, update, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from urllib.parse import unquote
@@ -13,42 +13,27 @@ from app.core import config
 from app.core.db.session import get_async_session
 from app.core.globals import logger
 
-from .models import Group, Gallery, GroupChild, GroupMember
+from .models import Group, Gallery, GroupChild, GroupMember, Bookmark
 from . import services
 
 settings = config.settings
 api_router = APIRouter(prefix='/library', tags=['library'])
 
-async def get_fav_group(session, user):
-    fav_group = await session.scalar(
-        select(Group).where(and_(
-            Group.user_id==user.id, 
-            Group.name=="Favorites"
-        ))
-    )
-    if not fav_group:
-        logger.log(20, f"favorites group for user: {user.id} not found")
-        raise HTTPException(status_code=404, detail="Favorites group not found")
-    return fav_group
+@api_router.get('/favorite-files')
+async def check_favorite(
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+    path: str | None = Query(None),
+):
+    pass
 
 @api_router.get('/favorite')
 async def check_favorite(
-    user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
-    path: str = Query(...), 
+    user: User = Depends(current_active_user),
+    path: str | None = Query(None),
 ):
-    logger.log(20, f"checking if `%s` is in favorites", str(path))
-    fav_group = await get_fav_group(session, user)
-    result = await session.scalar(
-        select(GroupMember).where(and_(
-            GroupMember.group_id==fav_group.id,
-            GroupMember.user_id==user.id,
-            GroupMember.path==path,
-        ))
-    )
-    return {
-        "exists": result is not None,
-    }
+    return await services.check_favorite_in_db(session, user, path)
 
 @api_router.post('/favorite')
 async def add_favorite(
@@ -70,7 +55,7 @@ async def add_favorite(
         await services.add_gallery_to_db(path, user, session)
 
     # add to favorites
-    fav_group = await get_fav_group(session, user)
+    fav_group = await services.get_fav_group(session, user)
     new_favorite = GroupMember(
         user_id=user.id,
         group_id=fav_group.id,
@@ -94,7 +79,7 @@ async def delete_favorite(
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    fav_group = await get_fav_group(session, user)
+    fav_group = await services.get_fav_group(session, user)
 
     query = delete(GroupMember).where(and_(
         GroupMember.group_id==fav_group.id,
@@ -110,6 +95,35 @@ async def delete_favorite(
         )
     else:
         await session.commit()
+
+@api_router.get('/bookmark')
+async def check_bookmark(
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+    path: str | None = Query(None),
+    page: str | None = Query(None),
+):
+    return await services.check_bookmark_in_db(session, user, path, page)
+
+
+@api_router.post('/bookmark', status_code=201)
+async def add_bookmark(
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+    path: Path = Query(...), 
+    page: str = Query(...),
+):
+    await services.add_bookmark_to_db(session, user, path, page)
+
+
+@api_router.delete('/bookmark')
+async def delete_bookmark(
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+    path: str = Query(...), 
+    page: str = Query(...),
+):
+    await services.delete_bookmark_from_db(session, user, path, page)
 
 @api_router.post('/group')
 async def create_group(

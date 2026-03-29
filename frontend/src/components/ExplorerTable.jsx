@@ -1,95 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
-import { useSearchParams } from 'react-router-dom';
-import { convertToReadableSize } from '../utils';
 
-
-import './Explorer.css'
-
-function ExplorerHeader({path, navigate, loc}) {
-  const targets = ["/", ...path.split("/").filter(Boolean)];
-  const linkEntries = targets.map((item) => 
-      [item, item !== "/" 
-        ? encodeURIComponent(
-            path.slice(0, path.indexOf(item) + item.length)
-          ) 
-        : ""
-      ]
-  );
-
-  return (
-    <> 
-    <div className="w-[90%] mx-auto" style={{ display: "flex"}}>
-      <h1>
-      {
-        linkEntries.map(([name, link], idx) => (
-          <span className="px-2" key={link}>
-            {idx > 1 && ' /\u200B '}
-            <Link to={`/explorer/${link}`}>{ name }</Link>
-          </span>
-        ))
-      }
-      </h1>
-      <span style={{ marginLeft: 'auto' }}>
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          const q = e.target.elements.search.value;
-          navigate(`${loc}?search=${encodeURIComponent(q)}`);
-        }}>
-          <input className="border border-gray-300"
-                 name="search"
-                 type="text"
-                 placeholder="Search...">
-          </input>
-        </form>
-      </span>
-    </div>
-    </>
-  )
-}
-
-function PageSelect({ page, numPages, pageSize, searchStr, loc, navigate }) {
-  if (numPages < 1) return null;
-
-  const baseLink = searchStr ? `${loc}?search=${searchStr}&` : `${loc}?`
-
-  return (
-    <div className="flex justify-center gap-2 py-4">
-      <Link
-        to={`${baseLink}?page=${page - 1}&size=${pageSize}`}
-        className={page <= 1 ? "invisible" : ""}
-      >
-        &laquo; Prev
-      </Link>
-      <form onSubmit={(e) => {
-        e.preventDefault();
-        const val = Number(e.target.elements.page.value);
-        if (val >= 1 && val <= numPages) {
-          navigate(`${baseLink}page=${val}&size=${pageSize}`);
-        }
-      }}>
-        <input
-          name="page"
-          type="number"
-          min={1}
-          max={numPages}
-          defaultValue={page}
-          key={page}
-          className="w-16 text-center border border-gray-300 rounded bg-transparent"
-        />
-        <span> / {numPages}</span>
-      </form>
-      <Link
-        to={`${baseLink}page=${page + 1}&size=${pageSize}`}
-        className={page >= numPages ? "invisible" : ""}
-      >
-        Next &raquo;
-      </Link>
-    </div>
-  );
-}
-
-export default function Explorer() {
+export default function ExplorerTable() {
 
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -162,6 +72,7 @@ export default function Explorer() {
   })
 
   return (
+    <>
     <div className="mx-auto w-full max-w-screen-2xl overflow-x-auto pt-20">
       <ExplorerHeader path={pathDec} navigate={navigate} loc={loc}/>
       <PageSelect page={page} numPages={numPages} pageSize={pageSize} searchStr={searchStr} loc={loc} navigate={navigate} />
@@ -262,5 +173,6 @@ export default function Explorer() {
         navigate={navigate} 
       />
     </div>
+    </>
   )
 }

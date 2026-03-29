@@ -1,5 +1,5 @@
 import './App.css'
-import Navbar from './components/navbar'
+import Navbar from './components/Navbar'
 import { routes } from './routes/routes'
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from './context/AuthContext'
