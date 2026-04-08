@@ -1,48 +1,106 @@
 
-export default function ExplorerTable() {
+import { useEffect, useState } from "react";
+import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
+import { useSearchParams } from 'react-router-dom';
+import { convertToReadableSize } from '../utils';
+
+function Header({navigate, loc}) {
+  return (
+    <> 
+    <div className="w-[90%] mx-auto" style={{ display: "flex"}}>
+      <span style={{ marginLeft: 'auto' }}>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          const q = e.target.elements.search.value;
+          navigate(`${loc}?search=${encodeURIComponent(q)}`);
+        }}>
+          <input className="border border-gray-300"
+                 name="search"
+                 type="text"
+                 placeholder="Search...">
+          </input>
+        </form>
+      </span>
+    </div>
+    </>
+  )
+}
+
+function PageSelect({ page, numPages, pageSize, searchStr, loc, navigate }) {
+  if (numPages < 1) return null;
+
+  const baseLink = searchStr ? `${loc}?search=${searchStr}&` : `${loc}?`
+
+  return (
+    <div className="flex justify-center gap-2 py-4">
+      <Link
+        to={`${baseLink}page=${page - 1}&size=${pageSize}`}
+        className={page <= 1 ? "invisible" : ""}
+      >
+        &laquo; Prev
+      </Link>
+      <form onSubmit={(e) => {
+        e.preventDefault();
+        const val = Number(e.target.elements.page.value);
+        if (val >= 1 && val <= numPages) {
+          navigate(`${baseLink}page=${val}&size=${pageSize}`);
+        }
+      }}>
+        <input
+          name="page"
+          type="number"
+          min={1}
+          max={numPages}
+          defaultValue={page}
+          key={page}
+          className="w-16 text-center border border-gray-300 rounded bg-transparent"
+        />
+        <span> / {numPages}</span>
+      </form>
+      <Link
+        to={`${baseLink}page=${page + 1}&size=${pageSize}`}
+        className={page >= numPages ? "invisible" : ""}
+      >
+        Next &raquo;
+      </Link>
+    </div>
+  );
+}
+
+export default function ExplorerTable({route, listFunc}) {
 
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const loc = useLocation().pathname
-  const path = loc.replace(/^\/explorer\/?/, "");
+  // const path = loc.replace(/^\/explorer\/?/, "");
+  const path = loc.replace(new RegExp(`^\\/${route}\\/?`), "");
   const [data, setData] = useState([]);
   const [numPages, setNumPages] = useState(0);
   const page = Number(searchParams.get("page") ?? 1);
   const sizeParam = searchParams.get("size");
   const searchStr = searchParams.get("search");
-  const pageSize = Number(sizeParam ?? localStorage.getItem("explorerPageSize") ?? 50);
+  const pathDec = decodeURIComponent(path);
+
+  // local storage
+  const pageSize = Number(sizeParam ?? localStorage.getItem("pageSize") ?? 50);
 
   useEffect(() => {
-    localStorage.setItem("explorerPageSize", pageSize);
+    localStorage.setItem("pageSize", pageSize);
   }, [pageSize]);
-
-  // make api call to get the file list of the directory
+  
   useEffect(() => {
     async function fetchFiles() {
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL
-        let query = (path === "")
-          ? "" 
-          : `?path=${path}&page=${page}&size=${pageSize}`;
-        if (searchStr) {
-          query = query.startsWith("?") 
-            ? `${query}&search=${searchStr}`
-            : `?search=${searchStr}`
-        }
-        const res = await fetch(`${apiUrl}/api/v1/directory/browse${query}`);
-        if (!res.ok) throw new Error("Request failed");
-        const resp = await res.json();
-        setData(resp.contents);
-        setNumPages(resp.num_pages);
-      } catch (err) {
-        console.error(err);
-      }
+      setData([]);
+      // const data = await getFiles(pathDec, page, pageSize, searchStr);
+      const data = await listFunc({pathDec, page, pageSize, searchStr});
+      if (!data) return;
+      setData(data.contents);
+      setNumPages(data.num_pages);
     }
     fetchFiles();
   }, [path, page, pageSize, searchStr]);
 
   // determine if the path has a parent to include '..' in the directory
-  let pathDec = decodeURIComponent(path);
   let hasParent = false;
   parent = null;
   if (path !== '') {
@@ -52,74 +110,41 @@ export default function ExplorerTable() {
 
   const mdata = data.map((item) => {
 
-    const encoded_path = encodeURIComponent(item.path);
+    const pathEnc = encodeURIComponent(item.path);
 
     // let explorerLink;
     const explorerLink = item.is_file 
-      ? `/reader/${encoded_path}` 
-      : `/explorer/${encoded_path}`;
+      ? `/reader/${pathEnc}` 
+      : `/explorer/${pathEnc}`;
 
     // convert to B, KB, MB or GB
     const displaySize = convertToReadableSize(item.st_size, item.is_file);
 
     return {
       ...item,
-      encoded_path: encoded_path,
       explorerLink: explorerLink,
-      readerLink: `/reader/${encoded_path}`,
+      readerLink: `/reader/${pathEnc}`,
       displaySize: displaySize
     }
   })
 
   return (
-    <>
     <div className="mx-auto w-full max-w-screen-2xl overflow-x-auto pt-20">
-      <ExplorerHeader path={pathDec} navigate={navigate} loc={loc}/>
+      <Header navigate={navigate} loc={loc}/>
       <PageSelect page={page} numPages={numPages} pageSize={pageSize} searchStr={searchStr} loc={loc} navigate={navigate} />
       <table className="w-[90%] mx-auto border border-gray-300 border-collapse">
         <thead>
           <tr>
+            <th className="px-2 text-center">Actions</th>
             <th className="px-2 text-center">Name</th>
             <th className="px-2 text-left">Date Modified</th>
             <th className="px-2 text-left">Size</th>
-            <th className="px-2 text-center">Actions</th>
           </tr>
         </thead>
         <tbody>
-          { 
-            hasParent 
-              ? <tr key="..">
-                  <td className="pl-2">
-                    <Link to={ `/explorer/${encodeURIComponent(parent) }` } > .. </Link>
-                  </td>
-                </tr> 
-              : null
-          }
           {
             mdata.map(({name, path, st_mtime, displaySize, explorerLink, readerLink, is_dir}) => (
               <tr key={ path } className="hover:bg-white/10">
-
-                {/* file/folder */}
-                <td className="px-2 w-full max-w-0 truncate group/name hover:overflow-visible hover:whitespace-nowrap hover:relative hover:z-10">
-                  <Link className="group-hover/name:bg-[#242424] group-hover/name:pr-2" 
-                        to={ explorerLink }>{ name }{is_dir ? '/' : ""}
-                  </Link>
-                </td>
-
-                {/* timestamp */}
-                <td className="px-2 relative z-0 overflow-hidden whitespace-nowrap w-0">{
-                new Date(st_mtime*1000).toLocaleString('en-CA', {
-                  year: 'numeric',
-                  month: '2-digit',
-                  day: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                })}
-                </td>
-
-                {/* size */}
-                <td className="px-2 relative z-0 overflow-hidden whitespace-nowrap w-0">{ displaySize }</td>
 
                 {/* actions */}
                 <td className="px-2 relative z-0 whitespace-nowrap w-0">
@@ -159,6 +184,28 @@ export default function ExplorerTable() {
                   </svg>
                   </div>
                 </td>
+
+                {/* file/folder */}
+                <td className="px-2 w-full max-w-0 truncate group/name hover:overflow-visible hover:whitespace-nowrap hover:relative hover:z-10">
+                  <Link className="group-hover/name:bg-[#242424] group-hover/name:pr-2" 
+                        to={ explorerLink }>{ name }{is_dir ? '/' : ""}
+                  </Link>
+                </td>
+
+                {/* timestamp */}
+                <td className="px-2 relative z-0 overflow-hidden whitespace-nowrap w-0">{
+                new Date(st_mtime*1000).toLocaleString('en-CA', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })}
+                </td>
+
+                {/* size */}
+                <td className="px-2 relative z-0 overflow-hidden whitespace-nowrap w-0">{ displaySize }</td>
               </tr>
             ))
           }
@@ -173,6 +220,7 @@ export default function ExplorerTable() {
         navigate={navigate} 
       />
     </div>
-    </>
   )
 }
+
+

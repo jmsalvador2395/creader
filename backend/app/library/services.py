@@ -93,11 +93,11 @@ async def delete_bookmark_from_db(
 async def check_favorite_in_db(
     session: AsyncSession,
     user: User,
-    path: str | None, 
+    path: str | None = None, 
 ):
 
     # build conditions
-    logger.log(20, f"user `{user.id}` is checking if {path} is in favorites")
+    logger.log(20, f"user `{user.id}` is querying favorites")
     fav_group = await get_fav_group(session, user)
     conditions = [
         GroupMember.group_id==fav_group.id,
@@ -106,10 +106,13 @@ async def check_favorite_in_db(
     if path:
         conditions.append(GroupMember.path==path)
 
-    result = await session.scalars(
-        select(GroupMember.path).where(and_(*conditions))
+    result = await session.execute(
+        select(
+            GroupMember.path, 
+            GroupMember.date_added
+        ).where(and_(*conditions))
     )
-    return result.all()
+    return result.mappings().all()
 
 async def get_fav_group(session, user):
     fav_group = await session.scalar(

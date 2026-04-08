@@ -1,3 +1,4 @@
+import math
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, Query
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
@@ -12,20 +13,56 @@ from app.common.models.user import User
 from app.core import config
 from app.core.db.session import get_async_session
 from app.core.globals import logger
+from app.files import services as file_service
 
 from .models import Group, Gallery, GroupChild, GroupMember, Bookmark
-from . import services
+from . import services as lib_service
 
 settings = config.settings
 api_router = APIRouter(prefix='/library', tags=['library'])
 
-@api_router.get('/favorite-files')
-async def check_favorite(
+@api_router.get('/favorites-list')
+async def favorite_details(
     session: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_active_user),
-    path: str | None = Query(None),
+    page: int=Query(1),
+    size: int=Query(50),
+    search: str=Query(''),
 ):
-    pass
+    """returns the list of favorites and their corresponding details
+    """
+    records = await lib_service.check_favorite_in_db(session, user)
+    invalid = []
+    favorites = []
+    for f in records:
+        try:
+            favorites.append(file_service.get_file_info(
+                settings.BROWSER_ROOT / Path(f['path'])
+            ))
+        except Exception as e:
+            invalid.append(f['path'])
+    fav_details = sorted(
+        favorites,
+        key=lambda x: (~x['is_dir'], -x['st_mtime']),
+    )
+
+    if search != '':
+        fav_details = list(filter(
+            lambda item: search in item['name'].lower(),
+            fav_details
+        ))
+
+    start = max((page - 1) * size, 0)
+    page = page if start != 0 else 0
+
+    return {
+        'contents': fav_details[start:start + size], 
+        'page': page,
+        'page_size': size,
+        'num_pages': math.ceil(len(fav_details) / size),
+        'invalid': invalid,
+    }
+
 
 @api_router.get('/favorite')
 async def check_favorite(
@@ -33,7 +70,7 @@ async def check_favorite(
     user: User = Depends(current_active_user),
     path: str | None = Query(None),
 ):
-    return await services.check_favorite_in_db(session, user, path)
+    return await lib_service.check_favorite_in_db(session, user, path)
 
 @api_router.post('/favorite')
 async def add_favorite(
@@ -50,12 +87,12 @@ async def add_favorite(
         raise HTTPException(status_code=404, detail='Invalid Path')
 
     # make sure gallery exists
-    gallery_exists = await services.check_gallery_in_db(path, user, session)
+    gallery_exists = await lib_service.check_gallery_in_db(path, user, session)
     if not gallery_exists:
-        await services.add_gallery_to_db(path, user, session)
+        await lib_service.add_gallery_to_db(path, user, session)
 
     # add to favorites
-    fav_group = await services.get_fav_group(session, user)
+    fav_group = await lib_service.get_fav_group(session, user)
     new_favorite = GroupMember(
         user_id=user.id,
         group_id=fav_group.id,
@@ -79,7 +116,7 @@ async def delete_favorite(
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    fav_group = await services.get_fav_group(session, user)
+    fav_group = await lib_service.get_fav_group(session, user)
 
     query = delete(GroupMember).where(and_(
         GroupMember.group_id==fav_group.id,
@@ -103,7 +140,7 @@ async def check_bookmark(
     path: str | None = Query(None),
     page: str | None = Query(None),
 ):
-    return await services.check_bookmark_in_db(session, user, path, page)
+    return await lib_service.check_bookmark_in_db(session, user, path, page)
 
 
 @api_router.post('/bookmark', status_code=201)
@@ -113,7 +150,7 @@ async def add_bookmark(
     path: Path = Query(...), 
     page: str = Query(...),
 ):
-    await services.add_bookmark_to_db(session, user, path, page)
+    await lib_service.add_bookmark_to_db(session, user, path, page)
 
 
 @api_router.delete('/bookmark')
@@ -123,7 +160,7 @@ async def delete_bookmark(
     path: str = Query(...), 
     page: str = Query(...),
 ):
-    await services.delete_bookmark_from_db(session, user, path, page)
+    await lib_service.delete_bookmark_from_db(session, user, path, page)
 
 @api_router.post('/group')
 async def create_group(
@@ -159,7 +196,7 @@ async def add_gallery(
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    await services.add_gallery_to_db(path, user, session, nickname)
+    await lib_service.add_gallery_to_db(path, user, session, nickname)
 
 
 @api_router.get('/gallery')
@@ -169,7 +206,7 @@ async def check_gallery(
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    return await services.check_gallery_in_db(
+    return await lib_service.check_gallery_in_db(
         path, 
         user, 
         session, 

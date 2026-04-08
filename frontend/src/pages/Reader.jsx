@@ -1,10 +1,8 @@
 import { useRef, useEffect, useState } from "react";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
 import { 
-  readFavorites,
-  readBookmark,
-  createBookmark,
-  deleteBookmark
+  readFavorites, addFavorite, deleteFavorite,
+  readBookmark, createBookmark, deleteBookmark
 } from "../api/library"
 
 export function Reader() {
@@ -12,13 +10,12 @@ export function Reader() {
   const apiUrl = import.meta.env.VITE_API_URL;
   const PRELOAD_DIST = 3;
 
+  // set reactive variables
   const loc = useLocation().pathname
-  const path = loc.replace(/^\/reader\/?/, "");
   const {container, file} = useParams();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const divRef = useRef(null);
-  const [visited, setVisited] = useState(new Set());
   const [isSinglePage, setIsSinglePage] = useState(false);
   const [visiblePages, setVisiblePages] = useState([]);
   const [readDirection, setReadDirection] = useState("left");
@@ -26,36 +23,40 @@ export function Reader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [favorited, setFavorited] = useState(false);
   const [bookmarks, setBookmarks] = useState(new Set());
+  const [sortedBookmarks, setSortedBookmarks] = useState([]);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [toast, setToast] = useState(null);
   const [toastVisible, setToastVisible] = useState(false);
+  const [showCursor, setShowCursor] = useState(true);
+  const [lastPage, setLastPage] = useState(null);
+  const [lastPageNum, setLastPageNum] = useState(null);
+  const autoplayRef = useRef(null);
+  const autoplayCallbackRef = useRef(null);
+  const autoplayInterval = 45_000;
 
   useEffect(() => {
     let timeout;
     const handleMouseMove = () => {
-      document.body.style.cursor = "default";
+      setShowCursor(true);
       clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        document.body.style.cursor = "none";
-      }, 2000);
+      timeout = setTimeout(() => setShowCursor(false), 1000);
     };
     window.addEventListener("mousemove", handleMouseMove);
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       clearTimeout(timeout);
-      document.body.style.cursor = "default";
+      setShowCursor(true);
     };
   }, []);
 
-  const containerEnc = encodeURIComponent(container);
-
   // check favorite status
   useEffect(() => { 
-    console.log(`querying favorite status`);
     queryFavorite(); 
   }, [container]);
+
   async function queryFavorite() {
-    setFavorited(await readFavorites(container));
+    const res = await readFavorites(container)
+    setFavorited(res.length > 0);
   }
 
   // check bookmarks
@@ -63,13 +64,20 @@ export function Reader() {
     queryBookmarks();
   }, [container]);
 
-  async function queryBookmarks() {
+  const setBookmarkVars = (bookmarkSet) => {
+    setBookmarks(bookmarkSet);
+    setSortedBookmarks(Array.from(bookmarkSet)
+      .sort((a, b) => a.localeCompare(b, undefined, {numeric: true})
+    ))
+  };
+
+  const queryBookmarks = async () => {
     const res = await readBookmark(container, null);
     const next = new Set(res.map(item => item.page));
-    setBookmarks(next);
+    setBookmarkVars(next);
     const pageName = data[currentPage]?.name;
     if (pageName) setIsBookmarked(next.has(pageName));
-  }
+  };
 
   useEffect(() => {
     const pageName = data[currentPage]?.name;
@@ -90,14 +98,16 @@ export function Reader() {
       if (res) {
         const next = new Set(bookmarks);
         next.delete(pageName);
-        setBookmarks(next);
+        // setBookmarks(next);
+        setBookmarkVars(next);
         if (!menuOpen) showToast("Bookmark removed");
       }
     } else {
       const res = await createBookmark(container, pageName);
       if (res) {
         const next = new Set([...bookmarks, pageName]);
-        setBookmarks(next);
+        // setBookmarks(next);
+        setBookmarkVars(next);
         if (!menuOpen) showToast("Bookmark added");
       }
     }
@@ -123,13 +133,13 @@ export function Reader() {
   useEffect(() => {
     const index = data.findIndex((item) => item.name === file);
     if (index >= 0) {
-      setCurrentPage(index);
-      computeVisiblePages(index, false);
+      changePage(index, false);
     }
     divRef.current?.focus();
   }, [data]);
 
 
+  /*  */
   useEffect(() => {
     if ( data.length === 0 )
       return;
@@ -151,7 +161,49 @@ export function Reader() {
     }
   });
 
+  /*
+   * UI Logic
+   */
 
+  const goToNextBookmark = () => {
+    goToBookmark("next");
+  }
+
+  const goToPrevBookmark = () => {
+    goToBookmark("prev");
+  }
+
+  const goToBookmark = (direction) => {
+    if (direction !== "next" && direction !== "prev")
+      throw new Error("direction variable should be `next` or `prev`");
+
+    if (bookmarks.length === 0) return
+
+    const defaultPageName = direction === "next" 
+      ? sortedBookmarks[0]
+      : sortedBookmarks[sortedBookmarks.length-1];
+    const defaultPageNum = pages.findIndex(item => item.name === defaultPageName);
+    
+    const bookmarkPageNums = sortedBookmarks.map(bm => pages.findIndex(
+      item => item.name === bm
+    ));
+    if (direction === "prev") bookmarkPageNums.reverse();
+
+    for (let pageNum of bookmarkPageNums) {
+      if (direction === "prev" && pageNum < currentPage) {
+        changePage(pageNum, false);
+        return
+      }
+      if (direction === "next" && pageNum > currentPage) {
+        console.log(`setting page to ${pageNum}`);
+        changePage(pageNum, false);
+        return
+      }
+    }
+    changePage(defaultPageNum, false)
+  };
+
+  /* page turning logic */
   const shiftPage = (offset) => {
     const step = offset >= 0 ? 1 : -1;
     const absOffset = Math.abs(offset);
@@ -199,9 +251,7 @@ export function Reader() {
       }
     }
     if (curPageTemp !== currentPage) {
-      setCurrentPage(curPageTemp);
-      computeVisiblePages(curPageTemp, prematureExit);
-      divRef.current?.scrollIntoView({ behavior: 'instant' });
+      changePage(curPageTemp, prematureExit);
     }
     const pageName = data[curPageTemp].name;
     setIsBookmarked(bookmarks.has(pageName));
@@ -264,44 +314,111 @@ export function Reader() {
     return;
   }
 
+  /* sets the page and triggers a render */
+  const changePage = (index, prematureExit) => {
+    if (index === null) return
+    const lastPageName = pages[currentPage].name || null;
+    setLastPageNum(currentPage);
+    setLastPage(lastPageName);
+    setCurrentPage(index);
+    computeVisiblePages(index, prematureExit);
+    divRef.current?.scrollIntoView({ behavior: 'instant' });
+    if (autoplayRef.current) {
+      clearInterval(autoplayRef.current)
+      autoplayRef.current = setInterval(() => {
+        autoplayCallbackRef.current();
+      }, autoplayInterval);
+    }
+  }
+
+  /* slieshow functions */
+  const toggleAutoplay = () => {
+    if (autoplayRef.current) {
+      clearInterval(autoplayRef.current);
+      autoplayRef.current = null;
+      showToast('Autoplay off')
+    } else {
+      autoplayRef.current = setInterval(() => {
+          autoplayCallbackRef.current();
+      }, autoplayInterval);
+      showToast('Autoplay on')
+    }
+  };
+
+  const setAutoplay = (active) => {
+    if (active) {
+      clearInterval(autoplayRef.current);
+      autoplayRef.current = setInterval(() => {
+          autoplayCallbackRef.current();
+      }, autoplayInterval);
+      autoplayRef.current = null;
+      showToast('Autoplay on')
+    } else {
+      clearInterval(autoplayRef.current);
+      showToast('Autoplay off')
+    }
+  };
+
+  useEffect(() => {
+    autoplayCallbackRef.current = () => {
+      shiftPage(2);
+      if (currentPage >= pages.length)
+        changePage(0, false);
+    };
+  });
+
+  /* keyboard events */
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        shiftPage(-2);
-      } else if (e.key == 'ArrowDown') {
-        e.preventDefault();
-        shiftPage(-1)
-      } else if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        shiftPage(2);
-      } else if (e.key == 'ArrowUp') {
-        e.preventDefault();
-        shiftPage(1)
-      } else if (e.key === 'f' || e.key === 'Enter') {
-        e.preventDefault();
-        toggleFullscreen();
-      } else if (e.key === 'm') {
-        setMenuOpen(!menuOpen);
-      } else if (e.key === 'p') {
-        toggleBookmarked(currentPage);
+      // console.log(`pressed: ${e.key}`);
+      switch (e.key) {
+        case 'ArrowRight':
+          e.preventDefault();
+          shiftPage(-1);
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          shiftPage(2);
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          shiftPage(1);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          shiftPage(-2);
+          break;
+        case 'f':
+        case 'Enter':
+          e.preventDefault();
+          toggleFullscreen();
+          break;
+        case 'm':
+          setMenuOpen(!menuOpen);
+          break;
+        case 'b':
+          toggleBookmarked(currentPage);
+          break;
+        case 'p':
+          toggleFavorite();
+          break;
+        case 'j':
+          goToNextBookmark();
+          break;
+        case 'k':
+          goToPrevBookmark();
+          break;
+        case 'l':
+          changePage(lastPageNum, false);
+        case ' ':
+          toggleAutoplay();
+          break;
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentPage, visiblePages, pages]);
 
-  const setImageSource = (item, index) => {
-    const nearby = Math.abs(currentPage - index) < PRELOAD_DIST;
-    if (visited.has(index)) {
-      return item.link;
-    } else if (nearby) {
-      visited.add(index);
-      return item.link;
-    } else {
-      return undefined;
-    }
-  };
 
   if (loading) return (
     <>
@@ -324,15 +441,16 @@ export function Reader() {
   };
 
   const toggleFavorite = async () => {
-    const params = {
-      credentials: "include",
-      method: favorited ? "DELETE" : "POST"
-    };
-    await fetch(
-      `${apiUrl}/api/v1/library/favorite?path=${containerEnc}`, 
-      params, 
-    );
-    await queryFavorite()
+    let res;
+    if (favorited) {
+      res = await deleteFavorite(container);
+      if (res && !menuOpen) showToast("Favorite removed");
+    } else {
+      res = await addFavorite(container);
+      if (res && !menuOpen) showToast("Favorite added");
+    }
+    if (res) setFavorited(!favorited);
+    // await queryFavorite();
   }
 
   return (
@@ -369,7 +487,9 @@ export function Reader() {
         <div className="p-6 pt-12">
           <h2 className="text-lg font-bold mb-4">Menu</h2>
         </div>
-        <div className="px-3 flex items-stretch">
+
+        {/* bookmark and favorite buttons */}
+        <div className="px-3 py-1 flex items-stretch">
           <button
             className="flex items-center gap-2 text-white hover:text-yellow-400 transition-colors w-half"
             onClick={() => toggleFavorite()}
@@ -393,6 +513,69 @@ export function Reader() {
             Bookmark
           </button>
         </div>
+        <div className="px-3 py-1 items-stretch w-full items-center justify-center mx-auto block">
+          <label htmlFor="bookmark-select">Bookmark Select:</label>
+          <select 
+            key={`bm-${currentPage}`}
+            className="w-full px-3 py-2 rounded border-gray outline"
+            name="bookmarks-select" 
+            id="bookmark-select" 
+            defaultValue={
+              bookmarks.has(pages[currentPage]?.name) 
+              ? pages[currentPage].name ?? ""
+              : ""
+            }
+            onChange={(e) => {
+              const value = e.target.value;
+              if (!value) return;
+              const index = pages.findIndex((item) => item.name === value);
+              changePage(index, false);
+            }}
+          >
+            <option value="" disabled>Go to bookmark...</option>
+            {sortedBookmarks.map(bookmark => (
+                <option 
+                  key={bookmark} 
+                  value={bookmark}
+                  disabled={pages[currentPage].name === bookmark}
+                >
+                {bookmark}
+                </option>
+              ))
+            }
+          </select>
+        </div>
+        <div className="px-3 py-1 items-stretch w-full items-center justify-center mx-auto block">
+          <label htmlFor="page-select">Page Select:</label>
+          <select 
+            key={`pg-sel-${currentPage}`}
+            className="w-full px-3 py-2 rounded border-gray outline"
+            name="page-select" 
+            id="page-select" 
+            defaultValue={ pages[currentPage]?.name ?? ""}
+            // defaultValue=""
+            onChange={(e) => {
+              const value = e.target.value;
+              if (!value) return;
+              const index = pages.findIndex((item) => item.name === value);
+              changePage(index, false);
+            }}
+          >
+            <option value="" disabled>Go to page...</option>
+            {lastPage != pages[currentPage]?.name ? (
+              <option value={lastPage}>Prev: {lastPage}</option>
+            ) : null}
+            {pages.map((page, index) => (
+              <option 
+                key={page.name} 
+                value={page.name}
+                disabled={currentPage === index}
+              >
+              {page.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div
@@ -409,7 +592,13 @@ export function Reader() {
         &#9776;
       </button>
 
-      <div className="pages relative flex justify-center items-start cursor-pointer w-full" style={{ zIndex: 20, minHeight: '100vh' }}
+      <div 
+        className="pages relative flex justify-center items-start w-full"
+        style={{ 
+          zIndex: 20, 
+          minHeight: '100vh',
+          cursor: showCursor ? "pointer" : "none",
+        }}
         onClick={(e) => {
           const midpoint = window.innerWidth / 2;
           if (e.clientX < midpoint) shiftPage(1);
@@ -418,49 +607,45 @@ export function Reader() {
       >
       {/* Progress bar */}
       <div
-        className="absolute left-0 top-0 h-full z-30 cursor-pointer opacity-30 transition-opacity"
+        className="absolute left-0 top-0 h-full z-30 opacity-30 transition-opacity" 
         style={{
-          width: '8px',
+          width: '4px',
+          cursor: showCursor ? "pointer" : "none",
           background: `linear-gradient(to bottom, #3b82f6 ${((currentPage + 1) / pages.length) * 100}%, #9ca3af ${((currentPage + 1) / pages.length) * 100}%)`,
         }}
         onClick={(e) => {
           e.stopPropagation();
           const ratio = e.clientY / window.innerHeight;
           const targetPage = Math.floor(ratio * pages.length);
-          setCurrentPage(targetPage);
-          computeVisiblePages(targetPage, false);
-          divRef.current?.scrollIntoView({ behavior: 'instant' });
+          changePage(targetPage, false);
         }}
       />
-      { visiblePages.map((index) => (
-        <img
-          src={ setImageSource(pages[index], index) }
-          key={ pages[index].name }
-          style={{
-            height: isSinglePage ? 'auto' : '100vh',
-            maxHeight: '100vh',
-            maxWidth: visiblePages.length > 1 ? '50vw' : '100vw',
-            width: isSinglePage ? '100vw' : 'auto',
-            objectFit: 'contain',
-            cursor: 'pointer',
-            position: 'relative',
-            zIndex: 1,
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-            const midpoint = window.innerWidth / 2;
-            if (e.clientX < midpoint) shiftPage(2);
-            else shiftPage(-2);
-          }}
-        />
-      ))}
-      </div>
-      { pages.map((item, index) => {
-        if (visiblePages.includes(index)) return null;
-        const src = setImageSource(item, index);
-        if (!src) return null;
-        return <img key={item.name} src={src} style={{ display: 'none' }} />;
+      { visiblePages.map((index) => {
+        return (
+          <img
+            key={`page-${index}`}
+            src={pages[index].link}
+            crossOrigin="use-credentials"
+            style={{
+              height: isSinglePage ? 'auto' : '100vh',
+              maxHeight: '100vh',
+              maxWidth: visiblePages.length > 1 ? '50vw' : '100vw',
+              width: isSinglePage ? '100vw' : 'auto',
+              objectFit: 'contain',
+              cursor: showCursor ? 'pointer' : 'none',
+              position: 'relative',
+              zIndex: 1,
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              const midpoint = window.innerWidth / 2;
+              if (e.clientX < midpoint) shiftPage(2);
+              else shiftPage(-2);
+            }}
+          />
+        );
       })}
+      </div>
       </div>
     </>
   )
@@ -489,9 +674,6 @@ export function ReaderRedirect() {
     fetchInfo();
   }, [path]);
 
-  const container = encodeURIComponent(data.container);
-  const file = encodeURIComponent(data.file);
-
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -499,8 +681,6 @@ export function ReaderRedirect() {
 
     const container = encodeURIComponent(data.container);
     const file = encodeURIComponent(data.file);
-
-    console.log(`navigate to: /reader/${container}/${file}`);
 
     navigate(`/reader/${container}/${file}`, { replace: true });
   }, [data, navigate]);

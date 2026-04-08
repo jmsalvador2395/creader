@@ -1,5 +1,6 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext"
+import { useEffect } from "react";
 
 export default function Login() {
     const { user, loading, login } = useAuth();
@@ -7,14 +8,22 @@ export default function Login() {
     const [searchParams] = useSearchParams();
     const redirect = searchParams.get("redirect") || "/";
 
+    useEffect(() => {
+        checkLogin();
+    }, [user])
+
+    const checkLogin = () => {
+        if (user) navigate(redirect);
+    };
+    // checkLogin();
     const doLogin = async (e) => {
         e.preventDefault();
         const form = new FormData(e.target);
         try {
             await login(form.get('username'), form.get('password'));
-            navigate(redirect);
-        } catch {
+        } catch (err){
             console.log(`Failed login`);
+            console.log(err);
         }
     };
     return (

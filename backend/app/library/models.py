@@ -25,7 +25,11 @@ class GroupMember(SQLModel, table=True):
     path: str = Field(
         sa_column=Column(
             String,
-            ForeignKey("gallery.path", ondelete="CASCADE"),
+            ForeignKey(
+                "gallery.path", 
+                ondelete="CASCADE",
+                onupdate="CASCADE",
+            ),
             primary_key=True,
         )
     )

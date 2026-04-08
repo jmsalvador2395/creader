@@ -1,7 +1,13 @@
+import ExplorerTable from "../components/ExplorerTable";
+import { getFavoritesList } from "../api/library";
+
 
 export default function Favorites() {
+
   return (
-    <h1> Favorites </h1>
+    <>
+    <ExplorerTable route="/favorites" listFunc={getFavoritesList}/>
+    </>
   )
 }
 

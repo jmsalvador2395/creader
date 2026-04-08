@@ -3,9 +3,11 @@ from pathlib import Path
 from typing import Union
 from PIL import Image
 from io import BytesIO
+from fastapi import HTTPException
 
 from app.core.config import settings
 from app.common.files import is_supported_archive, is_supported_image
+from app.core.globals import logger
 
 from zipfile import ZipFile, BadZipFile
 
@@ -29,6 +31,32 @@ def get_file_info(p: Path):
         'is_supported_archive': is_supported_archive(p),
         'is_supported_image': is_supported_image(p),
     }
+
+def list_entries_in_container(
+    p: Path, 
+    img: bool,
+    by: str,
+):
+    logger.log(20, f"listing entries for `{str(p)}`")
+    target = settings.BROWSER_ROOT / p
+    if not target.exists():
+        raise HTTPException(
+            status_code=404, 
+            detail='Invalid Path: {str(p)}'
+        )
+    try:
+        items = get_file_list(target, img)
+        return items
+    except BadZipFile as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"failed to open archive: {e}"
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Unsupported container {str(target)}"
+        )
 
 def get_file_list(target, img=None):
 

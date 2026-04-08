@@ -12,9 +12,7 @@ from fastapi_pagination import Page, paginate
 from app.core import config
 from app.core.globals import logger
 
-from .services import (
-    is_supported_image, get_file_info, get_file_list, natural_sort_key
-)
+from . import services
 settings = config.settings
 api_router = APIRouter(prefix='/directory', tags=['directory'])
 
@@ -25,7 +23,7 @@ async def info(p: Path=Query('')):
     if not target.exists():
         raise HTTPException(status_code=404, detail='Invalid Path')
 
-    return get_file_info(target)
+    return services.get_file_info(target)
 
 @api_router.get('/list-entries')
 async def list_entries(
@@ -33,26 +31,7 @@ async def list_entries(
     img: bool=Query(False),
     by: str=Query('name'),
 ):
-    logger.log(20, f"listing entries for `{str(p)}`")
-    target = settings.BROWSER_ROOT / p
-    if not target.exists():
-        raise HTTPException(
-            status_code=404, 
-            detail='Invalid Path: {str(p)}'
-        )
-    try:
-        items = get_file_list(target, img)
-        return items
-    except BadZipFile as e:
-        raise HTTPException(
-            status_code=500, 
-            detail=f"failed to open archive: {e}"
-        )
-    except ValueError as e:
-        raise HTTPException(
-            status_code=404, 
-            detail=f"Unsupported container {str(target)}"
-        )
+    return services.list_entries_in_container(p, img, by)
 
 
 @api_router.get('/resolve-target')
@@ -62,13 +41,13 @@ async def resolve_target(p: Path=Query(...)):
     if not target.exists():
         raise HTTPException(status_code=404, detail='Invalid Path')
     
-    info = get_file_info(target)
+    info = services.get_file_info(target)
 
     if info['is_supported_archive']:
         if target.suffix in settings.ZIP_FILES:
             try:
                 # flist = await list_entries(target, img=True)
-                flist = get_file_list(target, True)
+                flist = services.get_file_list(target, True)
                 resp = {
                     'container': target.relative_to(settings.BROWSER_ROOT),
                     'file': flist[0]['name'],
@@ -113,10 +92,11 @@ async def browse(
     target = settings.BROWSER_ROOT / path
 
     if not target.exists() or not target.is_dir():
+        logger.log(20, f"invalid path: {target}")
         raise HTTPException(status_code=404, detail='Invalid Path')
 
     files = sorted(
-        [get_file_info(f) for f in target.iterdir()],
+        [services.get_file_info(f) for f in target.iterdir()],
         key=lambda x: (~x['is_dir'], -x['st_mtime']),
     )
 

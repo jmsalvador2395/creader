@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
 import { useSearchParams } from 'react-router-dom';
 import { convertToReadableSize } from '../utils';
+import { getFiles } from '../api/directory';
 
 
 import './Explorer.css'
@@ -56,7 +57,7 @@ function PageSelect({ page, numPages, pageSize, searchStr, loc, navigate }) {
   return (
     <div className="flex justify-center gap-2 py-4">
       <Link
-        to={`${baseLink}?page=${page - 1}&size=${pageSize}`}
+        to={`${baseLink}page=${page - 1}&size=${pageSize}`}
         className={page <= 1 ? "invisible" : ""}
       >
         &laquo; Prev
@@ -100,39 +101,28 @@ export default function Explorer() {
   const page = Number(searchParams.get("page") ?? 1);
   const sizeParam = searchParams.get("size");
   const searchStr = searchParams.get("search");
+  const pathDec = decodeURIComponent(path);
+  console.log(loc, path);
+
+  // local storage
   const pageSize = Number(sizeParam ?? localStorage.getItem("explorerPageSize") ?? 50);
 
   useEffect(() => {
     localStorage.setItem("explorerPageSize", pageSize);
   }, [pageSize]);
-
-  // make api call to get the file list of the directory
+  
   useEffect(() => {
     async function fetchFiles() {
-      try {
-        const apiUrl = import.meta.env.VITE_API_URL
-        let query = (path === "")
-          ? "" 
-          : `?path=${path}&page=${page}&size=${pageSize}`;
-        if (searchStr) {
-          query = query.startsWith("?") 
-            ? `${query}&search=${searchStr}`
-            : `?search=${searchStr}`
-        }
-        const res = await fetch(`${apiUrl}/api/v1/directory/browse${query}`);
-        if (!res.ok) throw new Error("Request failed");
-        const resp = await res.json();
-        setData(resp.contents);
-        setNumPages(resp.num_pages);
-      } catch (err) {
-        console.error(err);
-      }
+      setData([]);
+      const data = await getFiles(pathDec, page, pageSize, searchStr);
+      if (!data) return;
+      setData(data.contents);
+      setNumPages(data.num_pages);
     }
     fetchFiles();
   }, [path, page, pageSize, searchStr]);
 
   // determine if the path has a parent to include '..' in the directory
-  let pathDec = decodeURIComponent(path);
   let hasParent = false;
   parent = null;
   if (path !== '') {
@@ -168,47 +158,16 @@ export default function Explorer() {
       <table className="w-[90%] mx-auto border border-gray-300 border-collapse">
         <thead>
           <tr>
+            <th className="px-2 text-center">Actions</th>
             <th className="px-2 text-center">Name</th>
             <th className="px-2 text-left">Date Modified</th>
             <th className="px-2 text-left">Size</th>
-            <th className="px-2 text-center">Actions</th>
           </tr>
         </thead>
         <tbody>
-          { 
-            hasParent 
-              ? <tr key="..">
-                  <td className="pl-2">
-                    <Link to={ `/explorer/${encodeURIComponent(parent) }` } > .. </Link>
-                  </td>
-                </tr> 
-              : null
-          }
           {
             mdata.map(({name, path, st_mtime, displaySize, explorerLink, readerLink, is_dir}) => (
               <tr key={ path } className="hover:bg-white/10">
-
-                {/* file/folder */}
-                <td className="px-2 w-full max-w-0 truncate group/name hover:overflow-visible hover:whitespace-nowrap hover:relative hover:z-10">
-                  <Link className="group-hover/name:bg-[#242424] group-hover/name:pr-2" 
-                        to={ explorerLink }>{ name }{is_dir ? '/' : ""}
-                  </Link>
-                </td>
-
-                {/* timestamp */}
-                <td className="px-2 relative z-0 overflow-hidden whitespace-nowrap w-0">{
-                new Date(st_mtime*1000).toLocaleString('en-CA', {
-                  year: 'numeric',
-                  month: '2-digit',
-                  day: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                })}
-                </td>
-
-                {/* size */}
-                <td className="px-2 relative z-0 overflow-hidden whitespace-nowrap w-0">{ displaySize }</td>
 
                 {/* actions */}
                 <td className="px-2 relative z-0 whitespace-nowrap w-0">
@@ -248,6 +207,28 @@ export default function Explorer() {
                   </svg>
                   </div>
                 </td>
+
+                {/* file/folder */}
+                <td className="px-2 w-full max-w-0 truncate group/name hover:overflow-visible hover:whitespace-nowrap hover:relative hover:z-10">
+                  <Link className="group-hover/name:bg-[#242424] group-hover/name:pr-2" 
+                        to={ explorerLink }>{ name }{is_dir ? '/' : ""}
+                  </Link>
+                </td>
+
+                {/* timestamp */}
+                <td className="px-2 relative z-0 overflow-hidden whitespace-nowrap w-0">{
+                new Date(st_mtime*1000).toLocaleString('en-CA', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })}
+                </td>
+
+                {/* size */}
+                <td className="px-2 relative z-0 overflow-hidden whitespace-nowrap w-0">{ displaySize }</td>
               </tr>
             ))
           }
