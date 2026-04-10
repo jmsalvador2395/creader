@@ -16,15 +16,15 @@ export async function deleteTag(tag) {
 }
 
 /* favorites functions */
-export async function getFavoritesList(page, size, search) {
+export async function getFavoritesList({page, pageSize, search}) {
   const options = {
     credentials: "include",
     method: "GET"
   };
 
   const params = new URLSearchParams();
-  if (page) params.set("path", page);
-  if (size) params.set("size", size);
+  if (page) params.set("page", page);
+  if (pageSize) params.set("size", pageSize);
   if (search) params.set("search", search);
 
   try {
