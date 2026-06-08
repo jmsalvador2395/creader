@@ -17,6 +17,10 @@ from app.auth.schemas import UserCreate, UserRead, UserUpdate
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+
+    # to handle remote file system connections
+    app.state.remote_fs_con = {}
+
     await create_db_and_tables()
     logger.log(20, "CREATED DATABASE AND TABLES")
     yield

@@ -6,9 +6,9 @@ from fastapi_users_db_sqlalchemy.access_token import (
 )
 
 from app.core.db.session import get_async_session
-from app.core.db.base import AuthBase
+from app.core.db.base import Base
 
-class AccessToken(SQLAlchemyBaseAccessTokenTableUUID, AuthBase):  
+class AccessToken(SQLAlchemyBaseAccessTokenTableUUID, Base):  
     pass
 
 async def get_access_token_db(

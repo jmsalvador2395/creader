@@ -61,27 +61,33 @@ def list_entries_in_container(
 def get_file_list(target, img=None):
 
     if target.suffix.lower() in settings.ZIP_FILES:
-        with ZipFile(target, 'r') as zf:
-            flist = zf.namelist()
-            if img:
-                flist = list(filter(
-                    lambda x: is_supported_image(Path(x)),
-                    flist
-                ))
-                flist = [
-                    {
-                        'name': f,
-                        **dict(zip(
-                            ['w', 'h'], 
-                            Image.open(BytesIO(zf.read(f))).size
-                        ))
-                    }
-                    for f in flist
-                ]
+        try:
+            with ZipFile(target, 'r') as zf:
+                logger.info(f"opened {str(target)} as zf")
+                flist = zf.namelist()
+                if img:
+                    flist = list(filter(
+                        lambda x: is_supported_image(Path(x)),
+                        flist
+                    ))
+                    flist = [
+                        {
+                            'name': f,
+                            **dict(zip(
+                                ['w', 'h'], 
+                                Image.open(BytesIO(zf.read(f))).size
+                            ))
+                        }
+                        for f in flist
+                    ]
+        except Exception as e:
+            logger.error(f"failed to open zip file. got error: {str(e)}")
         return sorted(flist, key=natural_sort_key)
 
     elif not target.is_dir():
-        raise ValueError(f"Unsupported target: {target}")
+        msg = f"Unsupported target: {target}"
+        logger.error(msg)
+        raise ValueError(msg)
     flist = target.iterdir()
     if img:
 

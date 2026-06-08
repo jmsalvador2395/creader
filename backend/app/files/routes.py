@@ -46,8 +46,8 @@ async def resolve_target(p: Path=Query(...)):
     if info['is_supported_archive']:
         if target.suffix in settings.ZIP_FILES:
             try:
-                # flist = await list_entries(target, img=True)
                 flist = services.get_file_list(target, True)
+                logger.info(f'flist: {flist}')
                 resp = {
                     'container': target.relative_to(settings.BROWSER_ROOT),
                     'file': flist[0]['name'],

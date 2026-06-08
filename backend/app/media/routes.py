@@ -25,7 +25,14 @@ async def container_image(
     target = settings.BROWSER_ROOT / c
     try:
         buffer, mime_type = get_image_from_container(img, target)
-        return StreamingResponse(buffer, media_type=mime_type)
+        headers = {
+            'Cache-Control': 'public, max-age=86400',
+        }
+        return StreamingResponse(
+            buffer, 
+            media_type=mime_type,
+            headers=headers,
+        )
     except BadZipFile:
         raise HTTPException(
             status_code=422,

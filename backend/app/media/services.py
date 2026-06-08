@@ -31,7 +31,7 @@ def get_image_from_container(img, target) -> Tuple[BytesIO, str]:
             return buffer, mime_type
     
     target = target / img
-    if is_supported_image(target) and target.exists():
+    if is_supported_image(target):
         with open(target, 'rb') as f:
             image_data = f.read()
             buffer = BytesIO(image_data)

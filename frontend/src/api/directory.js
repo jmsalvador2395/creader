@@ -13,11 +13,11 @@ export async function createTag(tag) {
 export async function deleteTag(tag) {
 }
 
-export async function getFiles({path, page, pageSize, search}) {
+export async function getFiles({path, page, size, search}) {
     const params = new URLSearchParams();
     if (path) params.set('path', path);
     if (page != null) params.set('page', page);
-    if (pageSize) params.set('size', pageSize);
+    if (size) params.set('size', size);
     if (search) params.set('search', search);
 
     try {

@@ -114,7 +114,12 @@ export default function Explorer() {
   useEffect(() => {
     async function fetchFiles() {
       setData([]);
-      const data = await getFiles(pathDec, page, pageSize, searchStr);
+      const data = await getFiles({
+        path: pathDec, 
+        page: page, 
+        size: pageSize, 
+        search: searchStr
+      });
       if (!data) return;
       setData(data.contents);
       setNumPages(data.num_pages);

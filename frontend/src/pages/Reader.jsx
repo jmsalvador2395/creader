@@ -209,8 +209,6 @@ export function Reader() {
     const absOffset = Math.abs(offset);
     const movingFromSingle = visiblePages.length === 1;
 
-    if (currentPage + offset >= pages.length) return
-
     let prematureExit = false;
 
     // step through pages (stop if the intermediate page is landscape)
