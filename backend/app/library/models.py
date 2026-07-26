@@ -13,7 +13,9 @@ class Group(Base):
     __table_args__ = (UniqueConstraint("user_id", "name"),)
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id"))
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("user.id", ondelete="CASCADE", onupdate="CASCADE")
+    )
     name: Mapped[str]
     date_created: Mapped[datetime] = mapped_column(default=datetime.now)
 
@@ -21,16 +23,28 @@ class Group(Base):
 class GroupChild(Base):
     __tablename__ = "groupchild"
 
-    parent_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("group.id"), primary_key=True)
-    child_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("group.id"), primary_key=True)
+    parent_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("group.id", ondelete="CASCADE", onupdate="CASCADE"), 
+        primary_key=True
+    )
+    child_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("group.id", ondelete="CASCADE", onupdate="CASCADE"), 
+        primary_key=True
+    )
     date_added: Mapped[datetime] = mapped_column(default=datetime.now)
 
 
 class GroupMember(Base):
     __tablename__ = "groupmember"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id"), primary_key=True)
-    group_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("group.id"), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("user.id", ondelete="CASCADE", onupdate="CASCADE"), 
+        primary_key=True
+    )
+    group_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("group.id", ondelete="CASCADE", onupdate="CASCADE"), 
+        primary_key=True
+    )
     path: Mapped[str] = mapped_column(
         String,
         ForeignKey("gallery.path", ondelete="CASCADE", onupdate="CASCADE"),
@@ -43,7 +57,7 @@ class Gallery(Base):
     __tablename__ = "gallery"
 
     path: Mapped[str] = mapped_column(primary_key=True)
-    nickname: Mapped[Optional[str]] = mapped_column(unique=True)
+    title: Mapped[Optional[str]] = mapped_column(unique=True)
     date_added: Mapped[datetime] = mapped_column(default=datetime.now)
     times_accessed: Mapped[int] = mapped_column(default=0)
     last_accessed: Mapped[Optional[datetime]] = mapped_column(default=None)
@@ -52,10 +66,13 @@ class Gallery(Base):
 class Rating(Base):
     __tablename__ = "rating"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id"), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("user.id", ondelete="CASCADE", onupdate="CASCADE"), 
+        primary_key=True
+    )
     path: Mapped[str] = mapped_column(
         String,
-        ForeignKey("gallery.path", ondelete="CASCADE"),
+        ForeignKey("gallery.path", ondelete="CASCADE", onupdate="CASCADE"),
         primary_key=True,
     )
     score: Mapped[int] = mapped_column(default=0)
@@ -67,10 +84,13 @@ class Tag(Base):
 
     path: Mapped[str] = mapped_column(
         String,
-        ForeignKey("gallery.path", ondelete="CASCADE"),
+        ForeignKey("gallery.path", ondelete="CASCADE", onupdate="CASCADE"),
         primary_key=True,
     )
-    tag_id: Mapped[int] = mapped_column(ForeignKey("taglist.id"), primary_key=True)
+    tag_id: Mapped[int] = mapped_column(
+        ForeignKey("taglist.id", ondelete="CASCADE", onupdate="CASCADE"), 
+        primary_key=True
+    )
     date_created: Mapped[datetime] = mapped_column(default=datetime.now)
 
 
@@ -85,10 +105,13 @@ class TagList(Base):
 class GalleryAuthor(Base):
     __tablename__ = "galleryauthor"
 
-    author_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("author.id"), primary_key=True)
+    author_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("author.id", ondelete="CASCADE", onupdate="CASCADE"), 
+        primary_key=True
+    )
     gallery_path: Mapped[str] = mapped_column(
         String,
-        ForeignKey("gallery.path", ondelete="CASCADE"),
+        ForeignKey("gallery.path", ondelete="CASCADE", onupdate="CASCADE"),
         primary_key=True,
     )
 
@@ -104,10 +127,13 @@ class Author(Base):
 class Bookmark(Base):
     __tablename__ = "bookmark"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id"), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("user.id", ondelete="CASCADE", onupdate="CASCADE"), 
+        primary_key=True
+    )
     path: Mapped[str] = mapped_column(
         String,
-        ForeignKey("gallery.path", ondelete="CASCADE"),
+        ForeignKey("gallery.path", ondelete="CASCADE", onupdate="CASCADE"),
         primary_key=True,
     )
     page: Mapped[str] = mapped_column(primary_key=True)
