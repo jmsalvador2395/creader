@@ -177,7 +177,7 @@ export function Reader() {
     if (direction !== "next" && direction !== "prev")
       throw new Error("direction variable should be `next` or `prev`");
 
-    if (bookmarks.length === 0) return
+    if (bookmarks.size === 0) return
 
     const defaultPageName = direction === "next" 
       ? sortedBookmarks[0]
