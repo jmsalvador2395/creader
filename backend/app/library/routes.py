@@ -192,17 +192,17 @@ async def delete_group(
 @api_router.post('/gallery')
 async def add_gallery(
     path: Path = Query(...),
-    nickname: str = Query(None),
+    title: str = Query(None),
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    await lib_service.add_gallery_to_db(path, user, session, nickname)
+    await lib_service.add_gallery_to_db(path, user, session, title)
 
 
 @api_router.get('/gallery')
 async def check_gallery(
     path: Path = Query(...),
-    nickname: str = Query(None),
+    title: str = Query(None),
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
 ):
@@ -210,5 +210,25 @@ async def check_gallery(
         path, 
         user, 
         session, 
-        nickname
+        title
     )
+
+@api_router.get('/tags')
+async def favorite_details(
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+    size: int=Query(50),
+    search: str=Query(''),
+):
+    pass
+
+
+@api_router.get('/tag-list')
+async def favorite_details(
+    session: AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user),
+    page: int=Query(1),
+    size: int=Query(50),
+    search: str=Query(''),
+):
+    pass

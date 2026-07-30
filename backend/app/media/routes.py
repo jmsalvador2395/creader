@@ -63,3 +63,8 @@ async def container_image(
             status_code=400, 
             detail=f"Not sure what happened but here's the stack trace: {str(e)}"
         )
+    
+        
+@api_router.get('/container-thumbnail')
+async def container_image(c: Path=Query(...)):
+    pass

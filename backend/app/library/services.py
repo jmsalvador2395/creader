@@ -131,14 +131,14 @@ async def add_gallery_to_db(
     path: Path,
     user: User,
     session: AsyncSession,
-    nickname: Path = None,
+    title: Path = None,
 ):
     logger.log(20, f"adding gallery `{path}` to db")
     full_path = settings.BROWSER_ROOT / path
     if not full_path.exists():
         logger.log(20, f"got invalid path: {str(path)}")
         raise HTTPException(status_code=404, detail='Invalid Path')
-    gallery = Gallery(path=str(path),nickname=nickname) 
+    gallery = Gallery(path=str(path), title=title) 
 
     session.add(gallery)
 
@@ -155,7 +155,7 @@ async def check_gallery_in_db(
     path: Path,
     user: User,
     session: AsyncSession,
-    nickname: str = None,
+    title: str = None,
 ):
     logger.log(20, f"checking if `{str(path)}` is a registered gallery")
     result = await session.scalar(
