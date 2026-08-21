@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Annotated, Optional, List
 from zipfile import ZipFile, BadZipFile
 from io import BytesIO
-from fastapi_pagination import Page, paginate
+from fastapi import Request
 
 from app.core import config
 from app.core.globals import logger
@@ -25,13 +25,34 @@ async def info(p: Path=Query('')):
 
     return services.get_file_info(target)
 
-@api_router.get('/list-entries')
+@api_router.get('/list-entries', name='files:list-entries')
 async def list_entries(
+    request: Request,
     p: Path=Query(''), 
     img: bool=Query(False),
     by: str=Query('name'),
 ):
-    return services.list_entries_in_container(p, img, by)
+    entries = services.list_entries_in_container(
+        p, img, by
+    )
+    if img:
+        entries = [
+            entry | {
+                'link': str(
+                    request
+                    .url_for('media:container-image')
+                    .include_query_params(c=str(p), img=entry['name'])
+                ),
+                'thumbnail-link': str(
+                    request
+                    .url_for('media:container-thumbnail')
+                    .include_query_params(container=str(p), img=entry['name'])
+                ),
+            }
+            for entry in entries
+        ]
+    return entries
+
 
 
 @api_router.get('/resolve-target')

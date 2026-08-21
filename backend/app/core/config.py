@@ -1,6 +1,8 @@
 from typing import Annotated, Set, Optional
 from pathlib import Path
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -13,7 +15,10 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = 'localhost:5173'
     VITE_API_URL: str = 'localhost:8000'
 
+    # paths
     BROWSER_ROOT: Path
+    BACKEND_ROOT: Path = Path(__file__).resolve().parent.parent.parent
+    CACHE_DIR: Path = BACKEND_ROOT / '.cache'
 
     FRONTEND_PORT: int = 5173
     BACKEND_PORT: int = 8000
@@ -47,3 +52,4 @@ class Settings(BaseSettings):
     ZIP_FILES: Set[str] = SUPPORTED_ARCHIVES | set({})
 
 settings = Settings()
+settings.CACHE_DIR.mkdir(parents=True, exist_ok=True)

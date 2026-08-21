@@ -60,28 +60,44 @@ def list_entries_in_container(
 
 def get_file_list(target, img=None):
 
+    def _file_entry(f, img):
+        path = Path(f).relative_to(settings.BROWSER_ROOT)
+        width, height = img.size
+        return {
+            'name': f.name, 
+            'w': width, 
+            'h': height,
+            'img-url': None,
+            'thumb-url': None,
+        }
+
+    def _zip_entry(container, name, img):
+        width, height = img.size
+        return {
+            'name': name, 
+            'w': width, 
+            'h': height,
+            'img-url': None,
+            'thumb-url': None,
+        }
+
     if target.suffix.lower() in settings.ZIP_FILES:
-        try:
-            with ZipFile(target, 'r') as zf:
-                logger.info(f"opened {str(target)} as zf")
-                flist = zf.namelist()
-                if img:
-                    flist = list(filter(
-                        lambda x: is_supported_image(Path(x)),
-                        flist
-                    ))
-                    flist = [
-                        {
-                            'name': f,
-                            **dict(zip(
-                                ['w', 'h'], 
-                                Image.open(BytesIO(zf.read(f))).size
-                            ))
-                        }
-                        for f in flist
-                    ]
-        except Exception as e:
-            logger.error(f"failed to open zip file. got error: {str(e)}")
+        with ZipFile(target, 'r') as zf:
+            logger.info(f"opened {str(target)} as zf")
+            flist = zf.namelist()
+            if img:
+                flist = list(filter(
+                    lambda x: is_supported_image(Path(x)),
+                    flist
+                ))
+                flist = [
+                    _zip_entry(
+                        target.relative_to(settings.BROWSER_ROOT),
+                        f, 
+                        Image.open(BytesIO(zf.read(f)))
+                    )
+                    for f in flist
+                ]
         return sorted(flist, key=natural_sort_key)
 
     elif not target.is_dir():
@@ -95,15 +111,9 @@ def get_file_list(target, img=None):
             lambda x: is_supported_image(Path(x)),
             flist
         ))
-        flist = sorted([
-            {
-                'name': f.name,
-                **dict(zip(
-                    ['w', 'h'], 
-                    Image.open(f).size
-                ))
-            }
-            for f in flist
-        # ], key=lambda x: x['name'])
-        ], key=natural_sort_key)
+        flist = sorted(
+            # [_folder_entry(f) for f in flist], 
+            [_file_entry(f, Image.open(f)) for f in flist], 
+            key=natural_sort_key
+        )
     return flist
