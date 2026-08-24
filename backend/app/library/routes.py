@@ -17,6 +17,7 @@ from app.files import services as file_service
 
 from .models import Group, Gallery, GroupChild, GroupMember, Bookmark
 from . import services as lib_service
+from .schemas import GalleryInfo
 
 settings = config.settings
 api_router = APIRouter(prefix='/library', tags=['library'])
@@ -87,9 +88,9 @@ async def add_favorite(
         raise HTTPException(status_code=404, detail='Invalid Path')
 
     # make sure gallery exists
-    gallery_exists = await lib_service.check_gallery_in_db(path, user, session)
+    gallery_exists = await lib_service.check_gallery_in_db(user, session, path)
     if not gallery_exists:
-        await lib_service.add_gallery_to_db(path, user, session)
+        await lib_service.add_gallery_to_db(user, session, path)
 
     # add to favorites
     fav_group = await lib_service.get_fav_group(session, user)
@@ -196,39 +197,33 @@ async def add_gallery(
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    await lib_service.add_gallery_to_db(path, user, session, title)
+    await lib_service.add_gallery_to_db(user, session, path, title)
 
 
 @api_router.get('/gallery')
 async def check_gallery(
     path: Path = Query(...),
-    title: str = Query(None),
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    return await lib_service.check_gallery_in_db(
-        path, 
+    return await lib_service.get_gallery(
         user, 
         session, 
-        title
+        path, 
     )
 
+@api_router.get('/gallery-info')
+async def get_gallery_info(
+    path: str = Query(...),
+    user: User = Depends(current_active_user),
+    session: AsyncSession = Depends(get_async_session),
+) -> GalleryInfo:
+    return await lib_service.get_gallery_info(user, session, path)
+
 @api_router.get('/tags')
-async def favorite_details(
+async def read_tags(
+    path: Path = Query(...),
     session: AsyncSession = Depends(get_async_session),
     user: User = Depends(current_active_user),
-    size: int=Query(50),
-    search: str=Query(''),
 ):
-    pass
-
-
-@api_router.get('/tag-list')
-async def favorite_details(
-    session: AsyncSession = Depends(get_async_session),
-    user: User = Depends(current_active_user),
-    page: int=Query(1),
-    size: int=Query(50),
-    search: str=Query(''),
-):
-    pass
+    return await lib_service.get_tags_for(user, session, str(path))

@@ -1,18 +1,31 @@
-
 const apiUrl = import.meta.env.VITE_API_URL;
 
 
 /* tag functions */
 export async function readTags(path) {
+  const options = {
+    credentials: "include",
+    method: "GET"
+  };
+
+  const params = new URLSearchParams();
+  params.set("path", path);
+
+  const res = await fetch(
+    `${apiUrl}/api/v1/library/tags?${params}`,
+    options,
+  );
+  if (!res.ok) throw new Error(`failed to fetch tags for path="${path}"`);
+  return res.json();
 }
 
-export async function assignTag(path, tag) {
+export async function updateTag(path, tag) {
 }
 
-export async function createTag(tag) {
+export async function createTag(path, tag) {
 }
 
-export async function deleteTag(tag) {
+export async function deleteTag(path, tag) {
 }
 
 /* favorites functions */
@@ -32,7 +45,7 @@ export async function getFavoritesList({page, size, search}) {
       `${apiUrl}/api/v1/library/favorites-list?${params}`, 
       options, 
     );
-    if (res.ok) return res.json()
+    if (res.ok) return res.json();
     return [];
 
   } catch (err) {
@@ -81,7 +94,26 @@ export async function deleteFavorite(path) {
 export async function createGallery(path) {
 }
 
-export async function readGallery(path) {
+export async function readGalleryInfo(path) {
+  if (!path) throw new Error('this function requires a path');
+
+  const params = new URLSearchParams();
+  params.set('path', path)
+
+  try {
+    const res = await fetch(
+      `${apiUrl}/api/v1/library/gallery-info?${params}`,
+      { 
+        credentials: "include",
+      },
+    );
+    return res.json();
+  } catch (err) {
+    console.log(
+      `function 'readGalleryInfo' failed to fetch gallery info for path="${path}"`
+    );
+    throw err;
+  }
 }
 
 export async function updateGallery(path) {

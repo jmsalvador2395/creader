@@ -2,30 +2,20 @@ from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Union
 from fastapi_pagination import add_pagination
-from contextlib import asynccontextmanager
 
 from app.files.routes import api_router as file_router
 from app.media.routes import api_router as media_router
 from app.library.routes import api_router as library_router
+from app.core.app import app
 from app.core.config import settings
 from app.core.globals import logger
-from app.core.db.session import create_db_and_tables
 from app.common.models.user import User
 from app.common.models.access_token import AccessToken
 from app.auth.user_mgmt import auth_backend, current_active_user, fastapi_users
 from app.auth.schemas import UserCreate, UserRead, UserUpdate
+from app.media.exceptions import register_media_exception_handlers
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-
-    # to handle remote file system connections
-    app.state.remote_fs_con = {}
-
-    await create_db_and_tables()
-    logger.log(20, "CREATED DATABASE AND TABLES")
-    yield
-
-app = FastAPI(lifespan=lifespan)
+register_media_exception_handlers(app)
 add_pagination(app)
 
 origins = [

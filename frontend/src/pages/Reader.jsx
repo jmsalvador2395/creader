@@ -117,7 +117,10 @@ export function Reader() {
   useEffect(() => {
     async function fetchInfo() {
       try {
-        const res = await fetch(`${apiUrl}/api/v1/directory/list-entries?p=${encodeURIComponent(container)}&img=true`);
+        const res = await fetch(
+          `${apiUrl}/api/v1/directory/list-entries?p=${encodeURIComponent(container)}&img=true`,
+          {credentials: "include"},
+        );
         if (!res.ok) throw new Error("Request failed");
         const resp = await res.json();
         setData(resp);

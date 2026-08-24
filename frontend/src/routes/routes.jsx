@@ -4,6 +4,7 @@ import Favorites from "../pages/Favorites";
 import { Reader, ReaderRedirect } from "../pages/Reader";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
+import Gallery from "../pages/Gallery";
 
 export const routes = [
   {
@@ -53,6 +54,13 @@ export const routes = [
     title: "Register",
     label: "register",
     element: <Register/>,
+    showInNav: false, // not shown in navbar
+  },
+  {
+    path: "/gallery/:container",
+    title: "Gallery",
+    label: "gallery",
+    element: <Gallery/>,
     showInNav: false, // not shown in navbar
   },
 ];

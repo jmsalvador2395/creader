@@ -1,4 +1,3 @@
-import './App.css'
 import Navbar from './components/Navbar'
 import { routes } from './routes/routes'
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
@@ -10,6 +9,7 @@ import Register from './pages/Register'
 function App() {
   const { user, loading } = useAuth();
   const loc = useLocation();
+
   if (loading) return <div>Loading...</div>
   if (!user) {
     return (
@@ -23,14 +23,14 @@ function App() {
 
   return (
     <>
-        <Navbar routes={ routes }/>
-        <Routes>
-        {
-            routes.map(({ path, element }) => (
-              <Route key={path} path={path} element={element} />
-            ))
-        }
-        </Routes>
+    <Navbar routes={ routes }/>
+    <Routes>
+    {
+      routes.map(({ path, element }) => (
+        <Route key={path} path={path} element={element} />
+      ))
+    }
+    </Routes>
     </>
   )
 }

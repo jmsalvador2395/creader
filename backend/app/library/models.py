@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy import ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db.base import Base
@@ -17,7 +17,7 @@ class Group(Base):
         ForeignKey("user.id", ondelete="CASCADE", onupdate="CASCADE")
     )
     name: Mapped[str]
-    date_created: Mapped[datetime] = mapped_column(default=datetime.now)
+    date_created: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
 class GroupChild(Base):
@@ -31,7 +31,7 @@ class GroupChild(Base):
         ForeignKey("group.id", ondelete="CASCADE", onupdate="CASCADE"), 
         primary_key=True
     )
-    date_added: Mapped[datetime] = mapped_column(default=datetime.now)
+    date_added: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
 class GroupMember(Base):
@@ -50,7 +50,7 @@ class GroupMember(Base):
         ForeignKey("gallery.path", ondelete="CASCADE", onupdate="CASCADE"),
         primary_key=True,
     )
-    date_added: Mapped[datetime] = mapped_column(default=datetime.now)
+    date_added: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
 class Gallery(Base):
@@ -58,7 +58,7 @@ class Gallery(Base):
 
     path: Mapped[str] = mapped_column(primary_key=True)
     title: Mapped[Optional[str]] = mapped_column(unique=True)
-    date_added: Mapped[datetime] = mapped_column(default=datetime.now)
+    date_added: Mapped[datetime] = mapped_column(server_default=func.now())
     times_accessed: Mapped[int] = mapped_column(default=0)
     last_accessed: Mapped[Optional[datetime]] = mapped_column(default=None)
 
@@ -76,7 +76,7 @@ class Rating(Base):
         primary_key=True,
     )
     score: Mapped[int] = mapped_column(default=0)
-    date_scored: Mapped[datetime] = mapped_column(default=datetime.now)
+    date_scored: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
 class Tag(Base):
@@ -91,15 +91,15 @@ class Tag(Base):
         ForeignKey("taglist.id", ondelete="CASCADE", onupdate="CASCADE"), 
         primary_key=True
     )
-    date_created: Mapped[datetime] = mapped_column(default=datetime.now)
+    date_created: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
 class TagList(Base):
     __tablename__ = "taglist"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str]
-    date_created: Mapped[datetime] = mapped_column(default=datetime.now)
+    name: Mapped[str] = mapped_column(unique=True)
+    date_created: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
 class GalleryAuthor(Base):
@@ -121,7 +121,7 @@ class Author(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     name: Mapped[str]
-    date_added: Mapped[datetime] = mapped_column(default=datetime.now)
+    date_added: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
 class Bookmark(Base):

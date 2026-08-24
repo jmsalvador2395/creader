@@ -1,6 +1,10 @@
 from fastapi import APIRouter, HTTPException, Query 
 from fastapi.responses import Response
 from zipfile import BadZipFile
+from io import BytesIO
+from pathlib import Path
+from zipfile import ZipFile
+import mimetypes
 
 from app.core.config import settings
 from app.core.globals import logger
@@ -9,11 +13,6 @@ from .services import (
     get_image_from_container, 
     get_thumbnail_from_container
 )
-
-from io import BytesIO
-from pathlib import Path
-from zipfile import ZipFile
-import mimetypes
 
 api_router = APIRouter(prefix='/media', tags=['media'])
         
@@ -39,16 +38,16 @@ async def container_image(
         
 @api_router.get('/container-thumbnail', name='media:container-thumbnail')
 async def container_thumbnail(
-    container: Path=Query(...), 
+    c: Path=Query(...), 
     img: str=Query(None),
-    max_dim: int=Query(320),
+    max_dim: int=Query(512),
 ):
     """returns a thumbnail from standard image types or zip files
     """
 
     logger.info('reached container-thumbnail endpoint')
 
-    target = settings.BROWSER_ROOT / container
+    target = settings.BROWSER_ROOT / c
     content, mime_type = get_thumbnail_from_container(
         img, target, max_dim
     )

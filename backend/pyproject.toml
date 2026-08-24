@@ -20,6 +20,7 @@ dependencies = [
     "asyncpg",
     "aiosqlite",
     "sqlmodel",
+    "numpy",
 ]
 requires-python = ">=3.8"
 authors = [

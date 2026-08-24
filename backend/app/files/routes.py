@@ -7,10 +7,14 @@ from pathlib import Path
 from typing import Annotated, Optional, List
 from zipfile import ZipFile, BadZipFile
 from io import BytesIO
+from app.common.models.user import User
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Request
 
 from app.core import config
 from app.core.globals import logger
+from app.auth.user_mgmt import current_active_user
+from app.core.db.session import get_async_session
 
 from . import services
 settings = config.settings
@@ -28,35 +32,24 @@ async def info(p: Path=Query('')):
 @api_router.get('/list-entries', name='files:list-entries')
 async def list_entries(
     request: Request,
+    user: User = Depends(current_active_user),
     p: Path=Query(''), 
     img: bool=Query(False),
     by: str=Query('name'),
 ):
+    logger.info(f"listing entries for {p}")
     entries = services.list_entries_in_container(
-        p, img, by
+        p, img, by, request=request,
     )
-    if img:
-        entries = [
-            entry | {
-                'link': str(
-                    request
-                    .url_for('media:container-image')
-                    .include_query_params(c=str(p), img=entry['name'])
-                ),
-                'thumbnail-link': str(
-                    request
-                    .url_for('media:container-thumbnail')
-                    .include_query_params(container=str(p), img=entry['name'])
-                ),
-            }
-            for entry in entries
-        ]
     return entries
 
 
 
 @api_router.get('/resolve-target')
-async def resolve_target(p: Path=Query(...)):
+async def resolve_target(
+    request: Request,
+    p: Path=Query(...)
+):
     target = settings.BROWSER_ROOT / p
 
     if not target.exists():
@@ -68,7 +61,6 @@ async def resolve_target(p: Path=Query(...)):
         if target.suffix in settings.ZIP_FILES:
             try:
                 flist = services.get_file_list(target, True)
-                logger.info(f'flist: {flist}')
                 resp = {
                     'container': target.relative_to(settings.BROWSER_ROOT),
                     'file': flist[0]['name'],
@@ -87,7 +79,10 @@ async def resolve_target(p: Path=Query(...)):
             'file': info['name'],
         }
     if info['is_dir']:
-        flist = await list_entries(target, img=True)
+        # flist = await list_entries(target, img=True)
+        flist = services.list_entries_in_container(
+            target, img=True, request=request
+        )
         if len(flist) == 0:
             raise HTTPException(status_code=404, detail="no images in target")
         return {

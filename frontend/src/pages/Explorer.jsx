@@ -3,6 +3,7 @@ import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
 import { useSearchParams } from 'react-router-dom';
 import { convertToReadableSize } from '../utils';
 import { getFiles } from '../api/directory';
+import { InformationCircleIcon,BookOpenIcon, PencilIcon } from '@heroicons/react/24/outline';
 
 
 import './Explorer.css'
@@ -152,6 +153,7 @@ export default function Explorer() {
       encoded_path: encoded_path,
       explorerLink: explorerLink,
       readerLink: `/reader/${encoded_path}`,
+      galleryLink: `/gallery/${encoded_path}`,
       displaySize: displaySize
     }
   })
@@ -171,45 +173,19 @@ export default function Explorer() {
         </thead>
         <tbody>
           {
-            mdata.map(({name, path, st_mtime, displaySize, explorerLink, readerLink, is_dir}) => (
+            mdata.map(({name, path, st_mtime, displaySize, explorerLink, readerLink, galleryLink, is_dir}) => (
               <tr key={ path } className="hover:bg-white/10">
 
                 {/* actions */}
                 <td className="px-2 relative z-0 whitespace-nowrap w-0">
                   <div className="flex justify-center">
                   <a href={ readerLink } target="_blank" rel="noopener noreferrer">
-                    <svg 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      strokeWidth={1.5} 
-                      stroke="currentColor" 
-                      className="size-6"
-                    >
-                       <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" 
-                       />
-                    </svg> 
+                    <BookOpenIcon className="size-6" />
                   </a>
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    fill="none" 
-                    viewBox="0 
-                    0 
-                    24 
-                    24" 
-                    strokeWidth={1.5} 
-                    stroke="currentColor" 
-                    className="size-6"
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
-                    />
-                  </svg>
+                  <a href={ galleryLink } target="_blank" rel="noopener noreferrer">
+                    <InformationCircleIcon className="size-6" />
+                  </a>
+                  {/* <a><BookOpenIcon className="size-6" /></a> */}
                   </div>
                 </td>
 
