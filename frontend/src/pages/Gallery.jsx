@@ -13,7 +13,13 @@ function GalleryTitleData({ container }) {
     queryFn: () => readGalleryInfo(container),
   });
 
-  return <h1>Title: { galleryInfo.title ?? galleryInfo.path }</h1>
+  return (
+    <>
+    <div className="text-center pb-5">
+      <h1>{ galleryInfo.title ?? "No Title" }</h1>
+    </div>
+    </>
+  )
 }
 
 function GalleryTitle({ container }) {
@@ -35,12 +41,12 @@ export default function Gallery() {
 
   return (
     <>
-    <div className="w-[90%] mx-auto border border-gray-300 border-collapse">
+    {/* <div className="w-[90%] mx-auto border border-gray-300 border-collapse"> */}
+    <div className="w-[90%] mx-auto ">
         <GalleryTitle container={container} />
         <Tags path={container} />
     </div>
     <div className="w-[50%] mx-auto border-gray-300">
-      test
       <Thumbnails path={container} />
     </div>
     </>

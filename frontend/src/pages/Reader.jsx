@@ -490,9 +490,16 @@ export function Reader() {
         <div className="p-6 pt-12">
           <h2 className="text-lg font-bold mb-4">Menu</h2>
         </div>
+        
+        <div className="px-3 py-1 flex items-stretch">
+          <a href={`/gallery/${encodeURIComponent(container)}`}>
+            {container}
+          </a>
+        </div>
 
         {/* bookmark and favorite buttons */}
         <div className="px-3 py-1 flex items-stretch">
+          {/* link to gallery info */}
           <button
             className="flex items-center gap-2 text-white hover:text-yellow-400 transition-colors w-half"
             onClick={() => toggleFavorite()}
